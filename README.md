@@ -255,7 +255,7 @@ Contributions are welcome! Please:
 
 ### Author
 - **Arma** (@varne) - Creator & Developer
-  - Discord: `ude1`
+  - Discord: `ude1` | [Join Server](https://discord.gg/7juusXNJA9)
   - GitHub: [@Varne666](https://github.com/Varne666)
 
 ### Special Thanks
