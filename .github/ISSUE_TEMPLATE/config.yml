@@ -1,17 +1,17 @@
-blank_issues_enabled: false
+blank_issues_enabled: true
 contact_links:
-  - name: 💬 Discord Support
-    url: https://discord.com/users/ude1
-    about: Get quick help on Discord (username: ude1)
+  - name: 💬 Join Discord Server
+    url: https://discord.gg/7juusXNJA9
+    about: Get help and chat with the community
   
-  - name: 📧 Email the Author
-    url: mailto:arma@zarma.studio
-    about: Send a direct email to Arma (Varne)
+  - name: 👤 Contact Author Directly
+    url: https://discord.com/users/ude1
+    about: DM Arma (ude1) on Discord for private inquiries
   
   - name: 🐛 Report a Bug
     url: https://github.com/Varne666/zArma-Studio/issues/new?template=bug_report.md
-    about: Create a bug report to help improve zArma Studio
+    about: Create a detailed bug report
   
   - name: ✨ Request a Feature
     url: https://github.com/Varne666/zArma-Studio/issues/new?template=feature_request.md
-    about: Suggest an idea for zArma Studio
+    about: Suggest a new feature or enhancement
