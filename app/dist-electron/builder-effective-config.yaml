@@ -1,0 +1,27 @@
+directories:
+  output: dist-electron
+  buildResources: build
+appId: com.arma.zimage
+productName: Z-Image Prompt Gen
+files:
+  - filter:
+      - dist/**/*
+      - backend/**/*
+      - electron/**/*
+      - data/**/*
+extraResources:
+  - from: backend
+    to: backend
+win:
+  target: nsis
+  icon: public/icon.png
+mac:
+  target: dmg
+  icon: public/icon.png
+linux:
+  target: AppImage
+  icon: public/icon.png
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+electronVersion: 28.3.3
