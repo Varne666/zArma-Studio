@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+
+# Build outputs
+dist/
+dist-electron/
+build/
+*.AppImage
+*.exe
+*.dmg
+*.deb
+*.rpm
+
+# Large model files
+*.onnx
+*.pth
+*.ckpt
+*.safetensors
+weights/
+models/*.onnx
+app/backend/models/*.onnx
+
+# Cache
+.cache/
+.vite/
+.eslintcache
+
+# Environment
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+
+# Temp files
+tmp/
+temp/
