@@ -244,14 +244,14 @@ Contributions are welcome! Please:
 ### Core Technologies
 - **DiffBIR**: [XPixelGroup/DiffBIR](https://github.com/XPixelGroup/DiffBIR) - Blind Image Restoration
 - **LaMa**: [saic-mdal/lama](https://github.com/saic-mdal/lama) - Large Mask Inpainting
-- **Ollama**: [ollama/ollama](https://github.com/ollama/ollama) - Local LLM inference
+- **Ollama**: [ollama/ollama](https://github.com/ollama/ollama) - Local LLM inference : use dolphin-mistral:7b-v2.8-q4_K_M for SFW and NSFW. Give it reference promts(more = better).
 - **React + Vite**: Frontend framework
 - **Express.js**: Backend API
 
 ### Models
 - Stable Diffusion v2.1 (for DiffBIR)
 - BSRNet, SwinIR (restoration models)
-- LaMa (inpainting)
+- LaMa (inpainting) 
 
 ### Author
 - **Arma** (@varne) - Creator & Developer
