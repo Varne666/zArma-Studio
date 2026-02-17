@@ -70,7 +70,7 @@ curl -fsSL https://ollama.com/install.sh | sh
 
 2. **Clone and setup:**
 ```bash
-git clone https://github.com/YOUR_USERNAME/zArma-Studio.git
+git clone https://github.com/Varne666/zArma-Studio.git
 cd zArma-Studio/app
 npm install
 cd backend
@@ -112,7 +112,7 @@ Navigate to `http://localhost:3000`
 
 2. **Clone repository:**
 ```powershell
-git clone https://github.com/YOUR_USERNAME/zArma-Studio.git
+git clone https://github.com/Varne666/zArma-Studio.git
 cd zArma-Studio\app
 npm install
 ```
@@ -253,8 +253,12 @@ Contributions are welcome! Please:
 - BSRNet, SwinIR (restoration models)
 - LaMa (inpainting)
 
+### Author
+- **Arma** (@varne) - Creator & Developer
+  - Discord: `ude1`
+  - GitHub: [@Varne666](https://github.com/Varne666)
+
 ### Special Thanks
-- Varne - Original concept and design
 - Contributors and testers
 
 ## 📄 License
@@ -265,8 +269,8 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file.
 
 ## 🔗 Links
 
-- [GitHub Repository](https://github.com/YOUR_USERNAME/zArma-Studio)
-- [Report Issues](https://github.com/YOUR_USERNAME/zArma-Studio/issues)
+- [GitHub Repository](https://github.com/Varne666/zArma-Studio)
+- [Report Issues](https://github.com/Varne666/zArma-Studio/issues)
 - [Ollama Models](https://ollama.com/library)
 
 ---
