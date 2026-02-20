@@ -1562,20 +1562,21 @@ app.post('/api/generate-images', async (req, res) => {
       if (parsed.generation_parameters?.prompts) {
         finalPrompt = parsed.generation_parameters.prompts.join(', ');
       } else if (parsed.subject_analysis) {
-        // Build descriptive prompt from JSON analysis
         const subj = parsed.subject_analysis;
         const bg = parsed.background;
         const light = parsed.lighting;
         const artistic = parsed.artistic_elements;
+        const color = parsed.color_profile;
         
         const parts = [];
-        if (subj.primary_subject) parts.push(subj.primary_subject);
-        if (subj.body_positioning?.posture) parts.push(`${subj.body_positioning.posture.toLowerCase().replace('_', ' ')} pose`);
+        if (subj.primary_subject) parts.push(`Professional photo of ${subj.primary_subject.toLowerCase()}`);
+        if (subj.hair?.length) parts.push(`${subj.hair.length.toLowerCase()} ${subj.hair.cut?.toLowerCase() || ''} hair`);
         if (subj.facial_expression?.overall_emotion) parts.push(`${subj.facial_expression.overall_emotion.toLowerCase().replace('_', ' ')} expression`);
         if (artistic?.visual_style) parts.push(artistic.visual_style.toLowerCase().replace('_', ' '));
-        if (bg?.setting_type) parts.push(`in ${bg.setting_type.toLowerCase()} ${bg.elements_detailed?.[0]?.name?.toLowerCase().replace('_', ' ') || 'setting'}`);
+        if (color?.temperature) parts.push(`${color.temperature.toLowerCase()} color palette`);
         if (light?.type) parts.push(`${light.type.toLowerCase().replace('_', ' ')} lighting`);
-        if (parsed.composition?.aspect_ratio) parts.push(`${parsed.composition.aspect_ratio} aspect ratio`);
+        if (bg?.setting_type) parts.push(`in ${bg.setting_type.toLowerCase()} ${bg.elements_detailed?.[0]?.name?.toLowerCase().replace('_', ' ') || 'setting'}`);
+        if (parsed.composition?.aspect_ratio) parts.push(`${parsed.composition.aspect_ratio} composition`);
         
         finalPrompt = parts.join(', ');
       }
@@ -1583,19 +1584,15 @@ app.post('/api/generate-images', async (req, res) => {
       // Not JSON, use as-is
     }
     
-    // Generate images using Imagen 3 API
+    // Generate images using Gemini 2.0 Flash with image generation
     for (let i = 0; i < Math.min(batchSize, 4); i++) {
       try {
-        // Use Imagen 3 API
         const response = await axios.post(
-          `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
           {
-            instances: [{ prompt: finalPrompt }],
-            parameters: {
-              sampleCount: 1,
-              aspectRatio: aspectRatio === '1:1' ? '1:1' : aspectRatio === '9:16' ? '9:16' : aspectRatio === '16:9' ? '16:9' : '1:1',
-              safetyFilterLevel: nsfwBypass ? "BLOCK_ONLY_HIGH" : "BLOCK_MEDIUM_AND_ABOVE",
-              personGeneration: "ALLOW_ADULT",
+            contents: [{ parts: [{ text: finalPrompt }] }],
+            generation_config: {
+              response_modalities: ["Text", "Image"]
             }
           },
           {
@@ -1605,9 +1602,14 @@ app.post('/api/generate-images', async (req, res) => {
         );
         
         // Extract image from response
-        const predictions = response.data?.predictions;
-        if (predictions && predictions[0]?.bytesBase64Encoded) {
-          images.push(`data:image/png;base64,${predictions[0].bytesBase64Encoded}`);
+        const candidates = response.data?.candidates;
+        if (candidates && candidates[0]?.content?.parts) {
+          for (const part of candidates[0].content.parts) {
+            if (part.inlineData?.data) {
+              images.push(`data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`);
+              break;
+            }
+          }
         }
       } catch (genError) {
         console.log(`[${requestId}] Image ${i + 1} failed:`, genError.message);
