@@ -1539,20 +1539,6 @@ app.post('/api/generate-images', async (req, res) => {
         .replace(/\bsex\b/gi, 'intimate artistic expression');
     }
     
-    // Map aspect ratio to dimensions
-    const aspectMap = {
-      '1:1': '1024x1024',
-      '9:16': '576x1024',
-      '16:9': '1024x576',
-      '3:4': '768x1024',
-      '4:3': '1024x768',
-      '3:2': '1024x683'
-    };
-    
-    // Map resolution
-    const resMultiplier = { '1K': 1, '2K': 1.5, '4K': 2 };
-    const baseSize = aspectMap[aspectRatio] || '1024x1024';
-    
     const images = [];
     
     // Parse JSON prompt if provided
