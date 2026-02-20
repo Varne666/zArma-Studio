@@ -110,7 +110,7 @@ interface TemplateConfig {
 }
 
 interface AllSettings {
-  engine: 'zimage' | 'imagen3' | 'watermark' | 'armscaler'
+  engine: 'zimage' | 'nbp3' | 'watermark' | 'armscaler'
   ethnicity: string
   skinTone: string
   age: string
@@ -237,7 +237,7 @@ const visibilityOptions = [
   { value: 'seductive', label: 'Seductive', icon: '🔥', desc: 'Explicit pose' }
 ]
 
-// ── Imagen 3-Specific Options ──
+// ── Nano Banana Pro-Specific Options ──
 const nbpPromptStyles = [
   { value: 'selfie', label: 'Selfie' },
   { value: 'mirror_selfie', label: 'Mirror Selfie' },
@@ -771,7 +771,7 @@ function ImageGenerationView() {
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: '20px' }}>
         <h2 style={{ fontSize: '1.5rem', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-          <ImageIcon size={24} color="#10b981" /> Imagen 3 Image Generation
+          <ImageIcon size={24} color="#10b981" /> Nano Banana Pro Image Generation
         </h2>
         <p style={{ color: '#888', fontSize: '0.9rem' }}>
           Powered by Gemini 3 Pro • Less censorship • Batch generation
@@ -1400,7 +1400,7 @@ function ImageGenerationView() {
 
 function App() {
   // ── Engine State ──
-  const [engine, setEngine] = useState<'zimage' | 'imagen3' | 'watermark' | 'armscaler' | 'imggen'>('zimage')
+  const [engine, setEngine] = useState<'zimage' | 'nbp3' | 'watermark' | 'armscaler' | 'imggen'>('zimage')
 
   // ── Shared Config ──
   const [ethnicity, setEthnicity] = useState('ukrainian')
@@ -1436,7 +1436,7 @@ function App() {
   const [bootyVisibility, setBootyVisibility] = useState('show')
   const [pussyVisibility, setPussyVisibility] = useState('hide')
 
-  // ── Imagen 3-Specific Config ──
+  // ── Nano Banana Pro-Specific Config ──
   const [nbpOutputFormat, setNbpOutputFormat] = useState<'prose' | 'json'>('prose')
   const [nbpPromptStyle, setNbpPromptStyle] = useState('selfie')
   const [nbpCameraDevice, setNbpCameraDevice] = useState('iPhone 15 Pro')
@@ -1991,8 +1991,8 @@ function App() {
         })
       }
 
-      // Add Imagen 3-specific params
-      if (engine === 'imagen3') {
+      // Add Nano Banana Pro-specific params
+      if (engine === 'nbp3') {
         Object.assign(params, {
           nbpOutputFormat,
           nbpPromptStyle,
@@ -2051,7 +2051,7 @@ function App() {
             age: getValue(age, customAge), 
             mode, 
             skinTone: getValue(skinTone, customSkinTone),
-            ...(engine === 'imagen3' && {
+            ...(engine === 'nbp3' && {
               nbpOutputFormat,
               nbpPromptStyle,
               nbpCameraDevice: resolvedNbpCameraDevice,
@@ -2194,7 +2194,7 @@ function App() {
 
   // Helper to get engine badge color
   const getEngineBadgeStyle = (eng?: string) => {
-    if (eng === 'imagen3') return { background: 'rgba(168, 85, 247, 0.2)', color: '#a855f7', border: '1px solid rgba(168, 85, 247, 0.4)' }
+    if (eng === 'nbp3') return { background: 'rgba(168, 85, 247, 0.2)', color: '#a855f7', border: '1px solid rgba(168, 85, 247, 0.4)' }
     if (eng === 'armscaler') return { background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.4)' }
     return { background: 'rgba(255, 107, 107, 0.2)', color: '#ff6b6b', border: '1px solid rgba(255, 107, 107, 0.4)' }
   }
@@ -2235,8 +2235,8 @@ function App() {
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-secondary { background: #333; }
         .btn-success { background: #22c55e; }
-        .btn-imagen3 { background: #a855f7; }
-        .btn-imagen3:hover:not(:disabled) { background: #9333ea; }
+        .btn-nbp3 { background: #a855f7; }
+        .btn-nbp3:hover:not(:disabled) { background: #9333ea; }
         .btn-purple { background: #8b5cf6; }
         .btn-purple:hover:not(:disabled) { background: #7c3aed; }
         .btn-pink { background: #ec4899; }
@@ -2268,20 +2268,20 @@ function App() {
         .engine-btn { flex: 1; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.25s ease; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .engine-btn.zimage { background: transparent; color: #888; }
         .engine-btn.zimage.active { background: linear-gradient(135deg, #ff3366, #ff6b6b); color: white; box-shadow: 0 2px 12px rgba(255, 51, 102, 0.4); }
-        .engine-btn.imagen3 { background: transparent; color: #888; }
-        .engine-btn.imagen3.active { background: linear-gradient(135deg, #a855f7, #6366f1); color: white; box-shadow: 0 2px 12px rgba(168, 85, 247, 0.4); }
+        .engine-btn.nbp3 { background: transparent; color: #888; }
+        .engine-btn.nbp3.active { background: linear-gradient(135deg, #a855f7, #6366f1); color: white; box-shadow: 0 2px 12px rgba(168, 85, 247, 0.4); }
         .engine-btn.watermark { background: transparent; color: #888; }
         .engine-btn.watermark.active { background: linear-gradient(135deg, #10b981, #059669); color: white; box-shadow: 0 2px 12px rgba(16, 185, 129, 0.4); }
         .engine-btn.armscaler { background: transparent; color: #888; }
         .engine-btn.armscaler.active { background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; box-shadow: 0 2px 12px rgba(245, 158, 11, 0.4); }
         .engine-btn.nbpgen { background: transparent; color: #888; }
         .engine-btn.nbpgen.active { background: linear-gradient(135deg, #c8ff00, #8ab800); color: #000; box-shadow: 0 2px 12px rgba(200, 255, 0, 0.4); }
-        .imagen3-section { background: rgba(168, 85, 247, 0.05); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
-        .imagen3-label { font-size: 0.7rem; text-transform: uppercase; letterSpacing: 0.5px; color: #a855f7; margin-bottom: 4px; display: block; font-weight: 600; }
-        .imagen3-select { width: 100%; padding: 6px 8px; borderRadius: 6px; border: 1px solid rgba(168,85,247,0.3); background: #1a1a1a; color: #fff; font-size: 0.85rem; }
-        .imagen3-toggle-row { display: flex; gap: 4px; margin-bottom: 8px; }
-        .imagen3-toggle-btn { flex: 1; padding: 6px; border-radius: 6px; border: 1px solid #333; background: #1a1a1a; color: #888; cursor: pointer; font-size: 0.75rem; font-weight: 600; text-align: center; transition: all 0.2s; }
-        .imagen3-toggle-btn.active { border-color: #a855f7; background: rgba(168,85,247,0.2); color: #a855f7; }
+        .nbp3-section { background: rgba(168, 85, 247, 0.05); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+        .nbp3-label { font-size: 0.7rem; text-transform: uppercase; letterSpacing: 0.5px; color: #a855f7; margin-bottom: 4px; display: block; font-weight: 600; }
+        .nbp3-select { width: 100%; padding: 6px 8px; borderRadius: 6px; border: 1px solid rgba(168,85,247,0.3); background: #1a1a1a; color: #fff; font-size: 0.85rem; }
+        .nbp3-toggle-row { display: flex; gap: 4px; margin-bottom: 8px; }
+        .nbp3-toggle-btn { flex: 1; padding: 6px; border-radius: 6px; border: 1px solid #333; background: #1a1a1a; color: #888; cursor: pointer; font-size: 0.75rem; font-weight: 600; text-align: center; transition: all 0.2s; }
+        .nbp3-toggle-btn.active { border-color: #a855f7; background: rgba(168,85,247,0.2); color: #a855f7; }
         
         /* NEW: Preset Button Styles - Compact 2-Column Grid */
         .preset-grid {
@@ -2521,7 +2521,7 @@ function App() {
             opacity: 0.85,
             textShadow: '0 2px 8px rgba(0,0,0,0.85)'
           }}>
-            {engine === 'zimage' || engine === 'imagen3'
+            {engine === 'zimage' || engine === 'nbp3'
               ? 'by Varne | Local LLM-Powered Prompt Engineering Machine'
               : 'by Varne | Local LLM-Powered Machine'}
           </p>
@@ -2536,8 +2536,8 @@ function App() {
               <Zap size={16} /> Z-Image Turbo
             </button>
             <button 
-              className={`engine-btn imagen3 ${engine === 'imagen3' ? 'active' : ''}`}
-              onClick={() => setEngine('imagen3')}
+              className={`engine-btn nbp3 ${engine === 'nbp3' ? 'active' : ''}`}
+              onClick={() => setEngine('nbp3')}
             >
               <Cpu size={16} /> Gemini 3 Pro
             </button>
@@ -2549,7 +2549,7 @@ function App() {
                 color: engine === 'imggen' ? 'white' : '#888'
               }}
             >
-              <ImageIcon size={16} /> Imagen 3
+              <ImageIcon size={16} /> Nano Banana Pro
             </button>
             <button 
               className={`engine-btn watermark ${engine === 'watermark' ? 'active' : ''}`}
@@ -2972,21 +2972,21 @@ function App() {
             
             {!configCollapsed && (
               <>
-                {/* ── Imagen 3 Options (shown only when Imagen 3 engine selected) ── */}
-                {engine === 'imagen3' && (
-                  <div className="imagen3-section">
+                {/* ── Nano Banana Pro Options (shown only when Nano Banana Pro engine selected) ── */}
+                {engine === 'nbp3' && (
+                  <div className="nbp3-section">
                     <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', color: '#a855f7', marginBottom: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Cpu size={14} /> Imagen 3 Settings
+                      <Cpu size={14} /> Nano Banana Pro Settings
                     </div>
 
                     {/* Output Format Toggle */}
                     <div style={{ marginBottom: '10px' }}>
-                      <label className="imagen3-label"><FileText size={10} style={{ display: 'inline' }} /> Output Format</label>
-                      <div className="imagen3-toggle-row">
-                        <button className={`imagen3-toggle-btn ${nbpOutputFormat === 'prose' ? 'active' : ''}`} onClick={() => setNbpOutputFormat('prose')}>
+                      <label className="nbp3-label"><FileText size={10} style={{ display: 'inline' }} /> Output Format</label>
+                      <div className="nbp3-toggle-row">
+                        <button className={`nbp3-toggle-btn ${nbpOutputFormat === 'prose' ? 'active' : ''}`} onClick={() => setNbpOutputFormat('prose')}>
                           <FileText size={12} style={{ display: 'inline', marginRight: '4px' }} />Prose
                         </button>
-                        <button className={`imagen3-toggle-btn ${nbpOutputFormat === 'json' ? 'active' : ''}`} onClick={() => setNbpOutputFormat('json')}>
+                        <button className={`nbp3-toggle-btn ${nbpOutputFormat === 'json' ? 'active' : ''}`} onClick={() => setNbpOutputFormat('json')}>
                           <FileJson size={12} style={{ display: 'inline', marginRight: '4px' }} />JSON
                         </button>
                       </div>
@@ -2994,7 +2994,7 @@ function App() {
 
                     {/* Prompt Style */}
                     <div style={{ marginBottom: '10px' }}>
-                      <label className="imagen3-label"><Camera size={10} style={{ display: 'inline' }} /> Prompt Style</label>
+                      <label className="nbp3-label"><Camera size={10} style={{ display: 'inline' }} /> Prompt Style</label>
                       <select value={nbpPromptStyle} onChange={(e) => setNbpPromptStyle(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid rgba(168,85,247,0.3)', background: '#1a1a1a', color: '#fff', fontSize: '0.85rem' }}>
                         {nbpPromptStyles.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                       </select>
@@ -3002,7 +3002,7 @@ function App() {
 
                     {/* Camera Device */}
                     <div style={{ marginBottom: '10px' }}>
-                      <label className="imagen3-label"><Camera size={10} style={{ display: 'inline' }} /> Camera Device</label>
+                      <label className="nbp3-label"><Camera size={10} style={{ display: 'inline' }} /> Camera Device</label>
                       <select value={nbpCameraDevice} onChange={(e) => setNbpCameraDevice(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid rgba(168,85,247,0.3)', background: '#1a1a1a', color: '#fff', fontSize: '0.85rem' }}>
                         {nbpCameraDevices.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                       </select>
@@ -3027,7 +3027,7 @@ function App() {
 
                     {/* Aesthetic */}
                     <div style={{ marginBottom: '10px' }}>
-                      <label className="imagen3-label"><SunMedium size={10} style={{ display: 'inline' }} /> Aesthetic</label>
+                      <label className="nbp3-label"><SunMedium size={10} style={{ display: 'inline' }} /> Aesthetic</label>
                       <select value={nbpAesthetic} onChange={(e) => setNbpAesthetic(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid rgba(168,85,247,0.3)', background: '#1a1a1a', color: '#fff', fontSize: '0.85rem' }}>
                         {nbpAesthetics.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                       </select>
@@ -3052,7 +3052,7 @@ function App() {
 
                     {/* Aspect Ratio */}
                     <div style={{ marginBottom: '10px' }}>
-                      <label className="imagen3-label"><Ratio size={10} style={{ display: 'inline' }} /> Aspect Ratio</label>
+                      <label className="nbp3-label"><Ratio size={10} style={{ display: 'inline' }} /> Aspect Ratio</label>
                       <select value={nbpAspectRatio} onChange={(e) => setNbpAspectRatio(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid rgba(168,85,247,0.3)', background: '#1a1a1a', color: '#fff', fontSize: '0.85rem' }}>
                         {nbpAspectRatios.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                       </select>
@@ -3060,10 +3060,10 @@ function App() {
 
                     {/* Detail Level */}
                     <div style={{ marginBottom: '10px' }}>
-                      <label className="imagen3-label"><Layers size={10} style={{ display: 'inline' }} /> Detail Level</label>
-                      <div className="imagen3-toggle-row">
+                      <label className="nbp3-label"><Layers size={10} style={{ display: 'inline' }} /> Detail Level</label>
+                      <div className="nbp3-toggle-row">
                         {nbpDetailLevels.map(d => (
-                          <button key={d.value} className={`imagen3-toggle-btn ${nbpDetailLevel === d.value ? 'active' : ''}`} onClick={() => setNbpDetailLevel(d.value)}>
+                          <button key={d.value} className={`nbp3-toggle-btn ${nbpDetailLevel === d.value ? 'active' : ''}`} onClick={() => setNbpDetailLevel(d.value)}>
                             {d.label}
                           </button>
                         ))}
@@ -3209,7 +3209,7 @@ function App() {
               </h2>
               {currentPrompt && (
                 <span className="badge badge-engine" style={getEngineBadgeStyle(engine)}>
-                  {engine === 'imagen3' ? <><Cpu size={10} /> Imagen 3</> : <><Zap size={10} /> Z-IMG</>}
+                  {engine === 'nbp3' ? <><Cpu size={10} /> Nano Banana Pro</> : <><Zap size={10} /> Z-IMG</>}
                 </span>
               )}
             </div>
@@ -3228,8 +3228,8 @@ function App() {
             ) : (
               <div className="output-box" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', minHeight: '200px' }}>
                 <span style={{ textAlign: 'center' }}>
-                  {engine === 'imagen3' 
-                    ? 'Select Imagen 3 settings and click "Generate New"'
+                  {engine === 'nbp3' 
+                    ? 'Select Nano Banana Pro settings and click "Generate New"'
                     : 'Click "Generate New" to create a prompt'
                   }
                 </span>
@@ -3259,7 +3259,7 @@ function App() {
                     <div className="badges">
                       {/* Engine Badge */}
                       <span className="badge badge-engine" style={getEngineBadgeStyle(item.metadata?.engine)}>
-                        {item.metadata?.engine === 'imagen3' ? <><Cpu size={10} /> Imagen 3</> : <><Zap size={10} /> Z-IMG</>}
+                        {item.metadata?.engine === 'nbp3' ? <><Cpu size={10} /> Nano Banana Pro</> : <><Zap size={10} /> Z-IMG</>}
                       </span>
                       <span className={`badge ${item.metadata?.mode === 'nsfw' ? 'badge-nsfw' : 'badge-sfw'}`}>
                         {item.metadata?.mode === 'nsfw' ? <><EyeOff size={10} /> NSFW</> : <><Eye size={10} /> SFW</>}
@@ -3308,7 +3308,7 @@ function App() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
               <div className="badges">
                 <span className="badge badge-engine" style={getEngineBadgeStyle(selectedHistoryItem.metadata?.engine)}>
-                  {selectedHistoryItem.metadata?.engine === 'imagen3' ? 'Imagen 3' : 'Z-IMG'}
+                  {selectedHistoryItem.metadata?.engine === 'nbp3' ? 'Nano Banana Pro' : 'Z-IMG'}
                 </span>
                 <span className={`badge ${selectedHistoryItem.metadata?.mode === 'nsfw' ? 'badge-nsfw' : 'badge-sfw'}`}>{selectedHistoryItem.metadata?.mode === 'nsfw' ? 'NSFW' : 'SFW'}</span>
                 <span className="badge">{selectedHistoryItem.metadata?.ethnicity}</span>

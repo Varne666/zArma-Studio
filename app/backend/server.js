@@ -1596,14 +1596,18 @@ app.post('/api/generate-images', async (req, res) => {
         const enhancedPrompt = `${finalPrompt}. High resolution ${sizeHint}, ${aspect} aspect ratio.`;
         
         const response = await axios.post(
-          `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${apiKey}`,
           {
-            instances: [{ prompt: enhancedPrompt }],
-            parameters: {
-              sampleCount: 1,
-              aspectRatio: aspect,
-              safetyFilterLevel: nsfwBypass ? "BLOCK_ONLY_HIGH" : "BLOCK_MEDIUM_AND_ABOVE",
-              personGeneration: "ALLOW_ADULT"
+            contents: [{ parts: [{ text: enhancedPrompt }] }],
+            generationConfig: {
+              responseModalities: ["TEXT", "IMAGE"],
+              temperature: parseFloat(temperature),
+              topP: parseFloat(topP),
+              maxOutputTokens: parseInt(outputLength),
+              imageConfig: { 
+                aspectRatio: aspect,
+                imageSize: resolution
+              }
             }
           },
           {
@@ -1613,13 +1617,19 @@ app.post('/api/generate-images', async (req, res) => {
         );
         
         // Extract image from response
-        const predictions = response.data?.predictions;
-        console.log(`[${requestId}] Response received, predictions:`, predictions?.length || 0);
-        if (predictions && predictions[0]?.bytesBase64Encoded) {
-          images.push(`data:image/png;base64,${predictions[0].bytesBase64Encoded}`);
-          console.log(`[${requestId}] Image extracted successfully`);
+        const candidates = response.data?.candidates;
+        console.log(`[${requestId}] Response received, candidates:`, candidates?.length || 0);
+        if (candidates && candidates[0]?.content?.parts) {
+          for (const part of candidates[0].content.parts) {
+            console.log(`[${requestId}] Part type:`, part.inlineData ? 'image' : 'text');
+            if (part.inlineData?.data) {
+              images.push(`data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`);
+              console.log(`[${requestId}] Image extracted successfully`);
+              break;
+            }
+          }
         } else {
-          console.log(`[${requestId}] No predictions in response`);
+          console.log(`[${requestId}] No candidates or parts in response`);
         }
       } catch (genError) {
         console.log(`[${requestId}] Image ${i + 1} failed:`, genError.message);
