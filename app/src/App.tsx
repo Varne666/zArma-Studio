@@ -900,21 +900,41 @@ function ImageGenerationView() {
               )}
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <input
-                type="password"
-                placeholder="Enter Google AI API Key (AIzaxxxxxxxxx...)"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                style={{
-                  flex: 1,
-                  padding: '10px 12px',
-                  background: '#1a1a1a',
-                  border: '1px solid #333',
-                  borderRadius: '6px',
-                  color: '#fff',
-                  fontSize: '0.85rem'
-                }}
-              />
+              {savedApiKey ? (
+                <div
+                  style={{
+                    flex: 1,
+                    padding: '10px 12px',
+                    background: '#0d1f15',
+                    border: '1px solid #10b981',
+                    borderRadius: '6px',
+                    color: '#10b981',
+                    fontSize: '0.85rem',
+                    fontFamily: 'monospace',
+                    userSelect: 'none',
+                    cursor: 'default'
+                  }}
+                  title="API key saved - click X to remove"
+                >
+                  {'•'.repeat(32)}
+                </div>
+              ) : (
+                <input
+                  type="password"
+                  placeholder="Enter Google AI API Key (AIzaxxxxxxxxx...)"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  style={{
+                    flex: 1,
+                    padding: '10px 12px',
+                    background: '#1a1a1a',
+                    border: '1px solid #333',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontSize: '0.85rem'
+                  }}
+                />
+              )}
               {savedApiKey && (
                 <button
                   onClick={removeApiKey}

@@ -1555,37 +1555,65 @@ app.post('/api/generate-images', async (req, res) => {
     
     const images = [];
     
-    // Generate images in batch
+    // Parse JSON prompt if provided
+    let finalPrompt = modifiedPrompt;
+    try {
+      const parsed = JSON.parse(modifiedPrompt);
+      if (parsed.generation_parameters?.prompts) {
+        finalPrompt = parsed.generation_parameters.prompts.join(', ');
+      } else if (parsed.subject_analysis) {
+        // Build descriptive prompt from JSON analysis
+        const subj = parsed.subject_analysis;
+        const bg = parsed.background;
+        const light = parsed.lighting;
+        const artistic = parsed.artistic_elements;
+        
+        const parts = [];
+        if (subj.primary_subject) parts.push(subj.primary_subject);
+        if (subj.body_positioning?.posture) parts.push(`${subj.body_positioning.posture.toLowerCase().replace('_', ' ')} pose`);
+        if (subj.facial_expression?.overall_emotion) parts.push(`${subj.facial_expression.overall_emotion.toLowerCase().replace('_', ' ')} expression`);
+        if (artistic?.visual_style) parts.push(artistic.visual_style.toLowerCase().replace('_', ' '));
+        if (bg?.setting_type) parts.push(`in ${bg.setting_type.toLowerCase()} ${bg.elements_detailed?.[0]?.name?.toLowerCase().replace('_', ' ') || 'setting'}`);
+        if (light?.type) parts.push(`${light.type.toLowerCase().replace('_', ' ')} lighting`);
+        if (parsed.composition?.aspect_ratio) parts.push(`${parsed.composition.aspect_ratio} aspect ratio`);
+        
+        finalPrompt = parts.join(', ');
+      }
+    } catch (e) {
+      // Not JSON, use as-is
+    }
+    
+    // Generate images using Imagen 3 API
     for (let i = 0; i < Math.min(batchSize, 4); i++) {
       try {
-        // Using Gemini API (imagen-3 or similar)
+        // Use Imagen 3 API
         const response = await axios.post(
-          'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent',
+          `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`,
           {
-            contents: [{
-              parts: [{ text: modifiedPrompt }]
-            }],
-            generation_config: {
-              temperature: 0.9,
-              top_p: 0.95,
+            instances: [{ prompt: finalPrompt }],
+            parameters: {
+              sampleCount: 1,
+              aspectRatio: aspectRatio === '1:1' ? '1:1' : aspectRatio === '9:16' ? '9:16' : aspectRatio === '16:9' ? '16:9' : '1:1',
+              safetyFilterLevel: nsfwBypass ? "BLOCK_ONLY_HIGH" : "BLOCK_MEDIUM_AND_ABOVE",
+              personGeneration: "ALLOW_ADULT",
             }
           },
           {
-            headers: { 'x-goog-api-key': apiKey },
+            headers: { 'Content-Type': 'application/json' },
             timeout: 120000
           }
         );
         
         // Extract image from response
-        const candidates = response.data?.candidates;
-        if (candidates && candidates[0]?.content?.parts) {
-          const imagePart = candidates[0].content.parts.find(p => p.inlineData);
-          if (imagePart?.inlineData?.data) {
-            images.push(`data:image/png;base64,${imagePart.inlineData.data}`);
-          }
+        const predictions = response.data?.predictions;
+        if (predictions && predictions[0]?.bytesBase64Encoded) {
+          images.push(`data:image/png;base64,${predictions[0].bytesBase64Encoded}`);
         }
       } catch (genError) {
         console.log(`[${requestId}] Image ${i + 1} failed:`, genError.message);
+        if (genError.response?.data?.error) {
+          console.log(`[${requestId}] Error details:`, JSON.stringify(genError.response.data.error));
+        }
       }
     }
     
