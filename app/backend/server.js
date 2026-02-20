@@ -1517,7 +1517,7 @@ app.post('/api/generate-images', async (req, res) => {
   const requestId = Math.random().toString(36).substring(7);
   
   try {
-    const { apiKey, prompt, batchSize = 1, aspectRatio = '1:1', resolution = '1K', nsfwBypass = true } = req.body;
+    const { apiKey, prompt, batchSize = 1, aspectRatio = '1:1', resolution = '1K', nsfwBypass = true, temperature = 1.0, topP = 0.95, outputLength = 8192 } = req.body;
     
     if (!apiKey || !prompt) {
       return res.status(400).json({ error: 'API key and prompt required' });
@@ -1584,15 +1584,21 @@ app.post('/api/generate-images', async (req, res) => {
       // Not JSON, use as-is
     }
     
-    // Generate images using Gemini 2.0 Flash with image generation
+    // Generate images using Gemini 3 Pro Image (Nano Banana Pro 3)
     for (let i = 0; i < Math.min(batchSize, 4); i++) {
       try {
         const response = await axios.post(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${apiKey}`,
           {
             contents: [{ parts: [{ text: finalPrompt }] }],
-            generation_config: {
-              response_modalities: ["Text", "Image"]
+            generationConfig: {
+              responseModalities: ["Text", "Image"],
+              temperature: parseFloat(temperature),
+              topP: parseFloat(topP),
+              maxOutputTokens: parseInt(outputLength),
+              imageConfig: { 
+                aspectRatio: aspectRatio === '1:1' ? '1:1' : aspectRatio === '9:16' ? '9:16' : aspectRatio === '16:9' ? '16:9' : aspectRatio === '3:4' ? '3:4' : aspectRatio === '4:3' ? '4:3' : '1:1'
+              }
             }
           },
           {

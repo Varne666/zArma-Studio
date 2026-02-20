@@ -599,6 +599,10 @@ function ImageGenerationView() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedImages, setGeneratedImages] = useState<string[]>([])
   const [nsfwBypass, setNsfwBypass] = useState(true)
+  const [temperature, setTemperature] = useState(1.0)
+  const [topP, setTopP] = useState(0.95)
+  const [outputLength, setOutputLength] = useState(8192)
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
   const [timer, setTimer] = useState(0)
   // Token count now computed in real-time via calculateTokens()
   const [showTokenTooltip, setShowTokenTooltip] = useState(false)
@@ -725,7 +729,10 @@ function ImageGenerationView() {
           batchSize,
           aspectRatio,
           resolution,
-          nsfwBypass
+          nsfwBypass,
+          temperature,
+          topP,
+          outputLength
         })
       })
       
@@ -1142,6 +1149,136 @@ function ImageGenerationView() {
               {resolutions.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
+
+          {/* Advanced Settings Toggle */}
+          <div style={{ marginBottom: '16px' }}>
+            <button
+              onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+              style={{
+                width: '100%',
+                padding: '10px',
+                background: 'transparent',
+                border: '1px solid #333',
+                borderRadius: '6px',
+                color: '#888',
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}
+            >
+              <span>Advanced settings</span>
+              <ChevronDown size={14} style={{ transform: showAdvancedSettings ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+            </button>
+          </div>
+
+          {/* Advanced Settings Panel */}
+          {showAdvancedSettings && (
+            <div style={{ marginBottom: '20px', padding: '12px', background: '#0d0d0d', borderRadius: '6px', border: '1px solid #222' }}>
+              {/* Temperature */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '0.75rem', color: '#888' }}>Temperature</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="2"
+                    step="0.1"
+                    value={temperature}
+                    onChange={(e) => setTemperature(parseFloat(e.target.value) || 1.0)}
+                    style={{
+                      width: '50px',
+                      padding: '4px 6px',
+                      background: '#1a1a1a',
+                      border: '1px solid #333',
+                      borderRadius: '4px',
+                      color: '#fff',
+                      fontSize: '0.75rem',
+                      textAlign: 'center'
+                    }}
+                  />
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="2"
+                  step="0.1"
+                  value={temperature}
+                  onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                  style={{ width: '100%', accentColor: '#10b981' }}
+                />
+                <div style={{ fontSize: '0.65rem', color: '#666', marginTop: '4px' }}>
+                  For Gemini 3, best results at default 1.0. Lower values may impact reasoning.
+                </div>
+              </div>
+
+              {/* Top P */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '0.75rem', color: '#888' }}>Top P</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={topP}
+                    onChange={(e) => setTopP(parseFloat(e.target.value) || 0.95)}
+                    style={{
+                      width: '50px',
+                      padding: '4px 6px',
+                      background: '#1a1a1a',
+                      border: '1px solid #333',
+                      borderRadius: '4px',
+                      color: '#fff',
+                      fontSize: '0.75rem',
+                      textAlign: 'center'
+                    }}
+                  />
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={topP}
+                  onChange={(e) => setTopP(parseFloat(e.target.value))}
+                  style={{ width: '100%', accentColor: '#10b981' }}
+                />
+                <div style={{ fontSize: '0.65rem', color: '#666', marginTop: '4px' }}>
+                  Probability threshold for top-p sampling.
+                </div>
+              </div>
+
+              {/* Output Length */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '0.75rem', color: '#888' }}>Output length</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="32768"
+                    step="1"
+                    value={outputLength}
+                    onChange={(e) => setOutputLength(parseInt(e.target.value) || 8192)}
+                    style={{
+                      width: '70px',
+                      padding: '4px 6px',
+                      background: '#1a1a1a',
+                      border: '1px solid #333',
+                      borderRadius: '4px',
+                      color: '#fff',
+                      fontSize: '0.75rem',
+                      textAlign: 'center'
+                    }}
+                  />
+                </div>
+                <div style={{ fontSize: '0.65rem', color: '#666', marginTop: '4px' }}>
+                  Maximum number of tokens in response.
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* NSFW Bypass Toggle */}
           <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '6px', padding: '12px' }}>
