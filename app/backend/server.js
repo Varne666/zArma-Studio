@@ -1596,17 +1596,14 @@ app.post('/api/generate-images', async (req, res) => {
         const enhancedPrompt = `${finalPrompt}. High resolution ${sizeHint}, ${aspect} aspect ratio.`;
         
         const response = await axios.post(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${apiKey}`,
           {
             contents: [{ parts: [{ text: enhancedPrompt }] }],
             generationConfig: {
               responseModalities: ["Text", "Image"],
               temperature: parseFloat(temperature),
               topP: parseFloat(topP),
-              maxOutputTokens: parseInt(outputLength),
-              imageConfig: { 
-                aspectRatio: aspect
-              }
+              maxOutputTokens: parseInt(outputLength)
             }
           },
           {
