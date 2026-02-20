@@ -1570,92 +1570,154 @@ app.post('/api/generate-images', async (req, res) => {
       // Not JSON, use as-is
     }
     
-    // Map resolution to image size hint
-    const sizeMap = {
-      '1K': '1024x1024',
-      '2K': '2048x2048', 
-      '4K': '4096x4096'
-    };
-    const sizeHint = sizeMap[resolution] || '1024x1024';
-    
     // Map aspect ratio
     const aspectMap = {
-      '1:1': '1:1',
-      '9:16': '9:16',
-      '16:9': '16:9',
-      '3:4': '3:4',
-      '4:3': '4:3',
-      '3:2': '3:2'
+      '1:1': '1:1', '9:16': '9:16', '16:9': '16:9',
+      '3:4': '3:4', '4:3': '4:3', '3:2': '3:2'
     };
     const aspect = aspectMap[aspectRatio] || '1:1';
     
-    // Generate images using Gemini 3 Pro Image (Nano Banana Pro 3)
+    // Config for retries and fallback
+    const PRIMARY_MODEL = 'gemini-3-pro-image-preview';
+    const FALLBACK_MODEL = 'gemini-2.5-flash-image';
+    const MAX_RETRIES = 6;
+    const ALLOW_DOWNSHIFT = true;
+    
+    function _sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+    
+    function _isRetryable(err){
+      const status = err?.response?.status;
+      const code = err?.response?.data?.error?.code;
+      const msg = String(err?.response?.data?.error?.message || err?.message || '');
+      if ([429,500,502,503,504].includes(status)) return true;
+      if ([429,500,502,503,504].includes(code)) return true;
+      if (/UNAVAILABLE|overload|high demand|resource exhausted/i.test(msg)) return true;
+      return false;
+    }
+    
+    function _timeoutForSize(sz){
+      if (sz === '4K') return 420000;
+      if (sz === '2K') return 240000;
+      return 120000;
+    }
+    
+    // Generate images with retry + fallback + downshift
     for (let i = 0; i < Math.min(batchSize, 4); i++) {
-      try {
-        // Add resolution and aspect ratio to prompt since API doesn't directly support them
-        const enhancedPrompt = `${finalPrompt}. High resolution ${sizeHint}, ${aspect} aspect ratio.`;
-        
-        // Use env var or request apiKey, header auth preferred
-        const geminiKey = process.env.GEMINI_API_KEY || apiKey;
-        
-        const response = await axios.post(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent`,
-          {
-            contents: [{ role: "user", parts: [{ text: enhancedPrompt }] }],
-            generationConfig: {
-              responseModalities: ["TEXT", "IMAGE"],
-              temperature: parseFloat(temperature),
-              topP: parseFloat(topP),
-              maxOutputTokens: parseInt(outputLength),
-              imageConfig: { 
-                aspectRatio: aspect,
-                imageSize: resolution
+      let lastErr = null;
+      let usedFallback = false;
+      let finalSize = resolution;
+      
+      // Build size priority list (for downshifting)
+      const sizesToTry = [resolution];
+      if (ALLOW_DOWNSHIFT && resolution === '4K') sizesToTry.push('2K');
+      if (ALLOW_DOWNSHIFT && !sizesToTry.includes('1K')) sizesToTry.push('1K');
+      
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        for (const size of sizesToTry) {
+          finalSize = size;
+          const timeoutMs = _timeoutForSize(size);
+          
+          // Try primary model first, then fallback
+          for (const model of [PRIMARY_MODEL, FALLBACK_MODEL]) {
+            if (model === FALLBACK_MODEL) usedFallback = true;
+            
+            try {
+              console.log(`[${requestId}] Attempt ${attempt+1}/${MAX_RETRIES} | Model: ${model} | Size: ${size}`);
+              
+              const geminiKey = process.env.GEMINI_API_KEY || apiKey;
+              
+              const response = await axios.post(
+                `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+                {
+                  contents: [{ role: "user", parts: [{ text: finalPrompt }] }],
+                  generationConfig: {
+                    responseModalities: ["TEXT", "IMAGE"],
+                    temperature: parseFloat(temperature),
+                    topP: parseFloat(topP),
+                    maxOutputTokens: parseInt(outputLength),
+                    imageConfig: { aspectRatio: aspect, imageSize: size }
+                  }
+                },
+                {
+                  headers: { 
+                    'Content-Type': 'application/json',
+                    'x-goog-api-key': geminiKey
+                  },
+                  timeout: timeoutMs
+                }
+              );
+              
+              // Extract image
+              const candidates = response.data?.candidates;
+              if (candidates && candidates[0]?.content?.parts) {
+                for (const part of candidates[0].content.parts) {
+                  const inlineData = part.inline_data || part.inlineData;
+                  if (inlineData?.data) {
+                    images.push({
+                      dataUrl: `data:${inlineData.mime_type || inlineData.mimeType || 'image/png'};base64,${inlineData.data}`,
+                      model: model,
+                      size: size,
+                      fallback: usedFallback
+                    });
+                    console.log(`[${requestId}] Success with ${model} at ${size}${usedFallback ? ' (FALLBACK)' : ''}`);
+                    break;
+                  }
+                }
+              }
+              
+              // If we got here with an image, break all loops
+              if (images.length > i) break;
+              
+            } catch (e) {
+              lastErr = e;
+              const status = e?.response?.status || e?.response?.data?.error?.code;
+              const msg = e?.response?.data?.error?.message || e?.message;
+              console.log(`[${requestId}] ${model} ${size} failed: ${status} - ${msg}`);
+              
+              if (!_isRetryable(e)) {
+                console.log(`[${requestId}] Non-retryable error, stopping`);
+                break;
               }
             }
-          },
-          {
-            headers: { 
-              'Content-Type': 'application/json',
-              'x-goog-api-key': geminiKey
-            },
-            timeout: 120000
           }
-        );
+          
+          if (images.length > i) break;
+        }
         
-        // Extract image from response (check both snake_case and camelCase)
-        const candidates = response.data?.candidates;
-        console.log(`[${requestId}] Response received, candidates:`, candidates?.length || 0);
-        if (candidates && candidates[0]?.content?.parts) {
-          for (const part of candidates[0].content.parts) {
-            // Handle both snake_case (inline_data) and camelCase (inlineData)
-            const inlineData = part.inline_data || part.inlineData;
-            console.log(`[${requestId}] Part type:`, inlineData ? 'image' : 'text');
-            if (inlineData?.data) {
-              images.push(`data:${inlineData.mime_type || inlineData.mimeType || 'image/png'};base64,${inlineData.data}`);
-              console.log(`[${requestId}] Image extracted successfully`);
-              break;
-            }
-          }
-        } else {
-          console.log(`[${requestId}] No candidates or parts in response`);
-        }
-      } catch (genError) {
-        console.log(`[${requestId}] Image ${i + 1} failed:`, genError.message);
-        if (genError.response?.data?.error) {
-          console.log(`[${requestId}] Error details:`, JSON.stringify(genError.response.data.error));
-        }
+        if (images.length > i) break;
+        
+        // Exponential backoff
+        const retryAfter = lastErr?.response?.headers?.['retry-after'];
+        const baseDelay = Math.min(60000, Math.floor(1000 * Math.pow(2, attempt)));
+        const headerDelay = retryAfter ? Math.min(60000, parseInt(retryAfter) * 1000) : 0;
+        const jitter = Math.floor(Math.random() * 250);
+        const delayMs = Math.max(baseDelay, headerDelay) + jitter;
+        
+        console.log(`[${requestId}] Retrying in ${delayMs}ms...`);
+        await _sleep(delayMs);
+      }
+      
+      if (images.length <= i) {
+        console.log(`[${requestId}] Image ${i+1} failed after all retries`);
       }
     }
     
     console.log(`[${requestId}] Generated ${images.length} image(s)`);
     
+    // Check if any used fallback
+    const usedFallback = images.some(img => img.fallback);
+    const finalSize = images[images.length - 1]?.size || resolution;
+    
     res.json({ 
-      images,
+      images: images.map(img => img.dataUrl),
       meta: {
         count: images.length,
         requested: batchSize,
         aspectRatio,
-        resolution
+        resolution: finalSize,
+        usedFallback,
+        models: images.map(img => img.model),
+        sizes: images.map(img => img.size)
       }
     });
     

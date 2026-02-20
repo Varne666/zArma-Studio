@@ -598,6 +598,7 @@ function ImageGenerationView() {
   const [resolution, setResolution] = useState('1K')
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedImages, setGeneratedImages] = useState<string[]>([])
+  const [generationMeta, setGenerationMeta] = useState<any>(null)
   const [nsfwBypass, setNsfwBypass] = useState(true)
   const [temperature, setTemperature] = useState(1.0)
   const [topP, setTopP] = useState(0.95)
@@ -758,6 +759,7 @@ function ImageGenerationView() {
       if (res.ok) {
         const data = await res.json()
         setGeneratedImages(data.images || [])
+        setGenerationMeta(data.meta || null)
       }
     } catch (e) {
       console.error('Generation failed:', e)
@@ -1101,6 +1103,24 @@ function ImageGenerationView() {
           {/* Generated Images Grid */}
           {generatedImages.length > 0 && (
             <div style={{ marginTop: '24px' }}>
+              {generationMeta?.usedFallback && (
+                <div style={{ 
+                  background: 'rgba(245, 158, 11, 0.15)', 
+                  border: '1px solid rgba(245, 158, 11, 0.5)', 
+                  borderRadius: '6px', 
+                  padding: '10px 12px',
+                  marginBottom: '16px',
+                  fontSize: '0.8rem',
+                  color: '#f59e0b'
+                }}>
+                  ⚠️ <strong>High demand detected.</strong> Switched to fallback model (Gemini 2.5 Flash) and/or reduced quality to ensure generation completes.
+                  {generationMeta.sizes && (
+                    <div style={{ marginTop: '4px', fontSize: '0.7rem', color: '#d97706' }}>
+                      Used: {generationMeta.sizes.join(', ')} • Models: {generationMeta.models?.join(', ')}
+                    </div>
+                  )}
+                </div>
+              )}
               <h3 style={{ fontSize: '1rem', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <CheckCircle size={16} color="#10b981" /> Generated Images
               </h3>
