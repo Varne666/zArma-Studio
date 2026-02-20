@@ -8,7 +8,7 @@
 
 zArma Studio is a comprehensive local AI toolkit for image analysis, prompt generation, upscaling, restoration, and watermark removal. All processing runs locally - no cloud services, no API keys needed.
 
-![Screenshot](docs/screenshot-v2.png)
+![Screenshot](docs/screenshot-v2.png?v=2)
 
 ## ✨ Features
 
