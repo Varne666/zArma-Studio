@@ -38,6 +38,19 @@ zArma Studio is a comprehensive local AI toolkit for image analysis, prompt gene
 - **History**: Save, favorite, and export prompts
 - **JSON Output**: Structured output format for advanced workflows
 
+### 🎨 Nano Banana Pro Image Generation
+- **Gemini 3 Pro Image**: Uses `gemini-3-pro-image-preview` (Nano Banana Pro) for high-quality image generation
+- **Auto-Fallback**: Automatically switches to `gemini-2.5-flash-image` on high demand/503 errors
+- **Smart Retry**: Exponential backoff with jitter for 503/429/5xx errors (up to 6 retries)
+- **Resolution Downshift**: Auto-downgrades 4K→2K→1K when overloaded
+- **Advanced Settings**: Temperature, Top P, Output Length controls
+- **Chat Management**: Save, name, pin, and organize generation sessions
+- **Real-time Token Counter**: Hover for detailed cost breakdown (input/output/total)
+- **API Key Persistence**: Secure localStorage storage with remove option
+- **Batch Generation**: Generate 1-4 images at once
+- **Aspect Ratios**: 1:1, 9:16, 16:9, 3:4, 4:3, 3:2
+- **Resolutions**: 1K, 2K, 4K
+
 ### 🔧 Technical
 - **100% Local**: All AI models run on your GPU/CPU
 - **Vision Models**: Uses llava/bakllava for image analysis
@@ -208,6 +221,25 @@ Add your own formatting examples:
 5. Click **Generate New**
 6. Copy or save prompts to history
 
+### Nano Banana Pro Image Generation
+
+1. Click **NBP Image Gen** tab
+2. Enter your Google AI Studio API key (saved locally)
+3. Type your prompt (supports JSON or plain text)
+4. Configure settings:
+   - **Aspect Ratio**: 1:1, 9:16, 16:9, 3:4, 4:3, 3:2
+   - **Resolution**: 1K, 2K, 4K
+   - **Batch Size**: 1-4 images
+5. (Optional) Click **Advanced settings** for:
+   - **Temperature**: 0-2 (default 1.0)
+   - **Top P**: 0-1 (default 0.95)
+   - **Output Length**: 1-32768 tokens
+6. Click **Generate Image**
+7. **Fallback Notification**: If you see a yellow banner, the system switched to fallback model due to high demand
+8. Use **Chat Management** (left sidebar) to save, name, and organize sessions
+
+**Note**: Requires paid Gemini 3 Pro subscription. Free tier (2.5 Flash) will not work.
+
 ## 🔧 Configuration
 
 ### Environment Variables
@@ -218,6 +250,13 @@ Create a `.env` file in `app/backend/`:
 PORT=3001
 OLLAMA_URL=http://localhost:11434
 DEFAULT_MODEL=nous-hermes:13b
+
+# Nano Banana Pro Image Generation
+GEMINI_API_KEY=your_google_ai_studio_key_here
+GEMINI_IMAGE_MODEL_PRIMARY=gemini-3-pro-image-preview
+GEMINI_IMAGE_MODEL_FALLBACK=gemini-2.5-flash-image
+GEMINI_IMAGE_MAX_RETRIES=6
+GEMINI_IMAGE_ALLOW_DOWNSHIFT=1
 ```
 
 ### JSON Examples
@@ -301,6 +340,24 @@ ollama pull bakllava:latest
 - Lower tile sizes in armscaler_simple.py
 - Close browser tabs with heavy content
 
+### "Image generation failed" / 503 Errors
+- **High Demand**: Google's servers are overloaded. The app will auto-retry with exponential backoff.
+- **Fallback Active**: If you see a yellow banner, the system switched to Gemini 2.5 Flash. This is normal during peak hours.
+- **Resolution Downshift**: Try selecting 1K or 2K instead of 4K for faster generation.
+- **API Key**: Ensure you have a valid Google AI Studio API key with billing enabled.
+
+### "No image generated" (0 images)
+- Check backend console for detailed error messages
+- Verify your API key has access to `gemini-3-pro-image-preview`
+- Free tier accounts may not have image generation access
+- Try again later during off-peak hours
+
+### GTK Warning (canberra-gtk-module)
+This is harmless and can be ignored:
+```bash
+sudo apt install -y libcanberra-gtk-module libcanberra-gtk3-module
+```
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please:
@@ -317,6 +374,7 @@ Contributions are welcome! Please:
 - **LaMa**: [saic-mdal/lama](https://github.com/saic-mdal/lama) - Large Mask Inpainting
 - **Ollama**: [ollama/ollama](https://github.com/ollama/ollama) - Local LLM inference
 - **LLaVA**: [haotian-liu/LLaVA](https://github.com/haotian-liu/LLaVA) - Vision language model
+- **Google Gemini**: Image generation via Gemini 3 Pro Image Preview
 - **React + Vite**: Frontend framework
 - **Express.js**: Backend API
 
