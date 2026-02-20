@@ -1595,10 +1595,13 @@ app.post('/api/generate-images', async (req, res) => {
         // Add resolution and aspect ratio to prompt since API doesn't directly support them
         const enhancedPrompt = `${finalPrompt}. High resolution ${sizeHint}, ${aspect} aspect ratio.`;
         
+        // Use env var or request apiKey, header auth preferred
+        const geminiKey = process.env.GEMINI_API_KEY || apiKey;
+        
         const response = await axios.post(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${apiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent`,
           {
-            contents: [{ parts: [{ text: enhancedPrompt }] }],
+            contents: [{ role: "user", parts: [{ text: enhancedPrompt }] }],
             generationConfig: {
               responseModalities: ["TEXT", "IMAGE"],
               temperature: parseFloat(temperature),
@@ -1611,19 +1614,24 @@ app.post('/api/generate-images', async (req, res) => {
             }
           },
           {
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'x-goog-api-key': geminiKey
+            },
             timeout: 120000
           }
         );
         
-        // Extract image from response
+        // Extract image from response (check both snake_case and camelCase)
         const candidates = response.data?.candidates;
         console.log(`[${requestId}] Response received, candidates:`, candidates?.length || 0);
         if (candidates && candidates[0]?.content?.parts) {
           for (const part of candidates[0].content.parts) {
-            console.log(`[${requestId}] Part type:`, part.inlineData ? 'image' : 'text');
-            if (part.inlineData?.data) {
-              images.push(`data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`);
+            // Handle both snake_case (inline_data) and camelCase (inlineData)
+            const inlineData = part.inline_data || part.inlineData;
+            console.log(`[${requestId}] Part type:`, inlineData ? 'image' : 'text');
+            if (inlineData?.data) {
+              images.push(`data:${inlineData.mime_type || inlineData.mimeType || 'image/png'};base64,${inlineData.data}`);
               console.log(`[${requestId}] Image extracted successfully`);
               break;
             }
