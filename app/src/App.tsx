@@ -47,6 +47,10 @@ import {
   Sparkle,
   Activity,
   Wand2,
+  Key,
+  Image as ImageIcon,
+  FolderOpen,
+  Pin,
 } from 'lucide-react'
 import WatermarkRemover from './components/WatermarkRemover'
 import ARMscaler from './components/ARMscaler'
@@ -571,12 +575,656 @@ const DYNAMIC_TEMPLATES: TemplateConfig[] = [
 ]
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// ═══ IMAGE GENERATION VIEW COMPONENT ═══
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface ChatSession {
+  id: string
+  name: string
+  prompt: string
+  images: string[]
+  createdAt: string
+  pinned?: boolean
+  folder?: string
+}
+
+function ImageGenerationView() {
+  // Load saved API key
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('nbp_api_key') || '')
+  // Removed unused showApiKey state
+  const [prompt, setPrompt] = useState('')
+  const [batchSize, setBatchSize] = useState(1)
+  const [aspectRatio, setAspectRatio] = useState('1:1')
+  const [resolution, setResolution] = useState('1K')
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generatedImages, setGeneratedImages] = useState<string[]>([])
+  const [nsfwBypass, setNsfwBypass] = useState(true)
+  const [timer, setTimer] = useState(0)
+  // Token count now computed in real-time via calculateTokens()
+  const [showTokenTooltip, setShowTokenTooltip] = useState(false)
+  const [chats, setChats] = useState<ChatSession[]>(() => {
+    const saved = localStorage.getItem('nbp_chats')
+    return saved ? JSON.parse(saved) : []
+  })
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null)
+  const [chatName, setChatName] = useState('')
+  const folders = ['Default', 'Favorites']
+  const [selectedFolder, setSelectedFolder] = useState('Default')
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+
+  const aspectRatios = ['Auto', '1:1', '9:16', '16:9', '3:4', '4:3', '3:2']
+  const resolutions = ['1K', '2K', '4K']
+
+  // Save API key when changed
+  useEffect(() => {
+    if (apiKey) localStorage.setItem('nbp_api_key', apiKey)
+  }, [apiKey])
+
+  const removeApiKey = () => {
+    localStorage.removeItem('nbp_api_key')
+    setApiKey('')
+  }
+  
+  const savedApiKey = !!localStorage.getItem('nbp_api_key')
+
+  // Save chats when changed
+  useEffect(() => {
+    localStorage.setItem('nbp_chats', JSON.stringify(chats))
+  }, [chats])
+
+  // Timer effect
+  useEffect(() => {
+    if (isGenerating) {
+      timerRef.current = setInterval(() => {
+        setTimer(prev => prev + 1)
+      }, 1000)
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current)
+      setTimer(0)
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [isGenerating])
+
+  // Real-time token calculation
+  const calculateTokens = () => {
+    const inputTokens = Math.ceil(prompt.length / 4)
+    const outputTokens = 500 * batchSize * (resolution === '4K' ? 4 : resolution === '2K' ? 2 : 1)
+    const totalTokens = inputTokens + outputTokens
+    
+    // Gemini 3 Pro pricing (approximate): $0.002 per 1K tokens
+    const inputCost = (inputTokens / 1000) * 0.002
+    const outputCost = (outputTokens / 1000) * 0.002
+    const totalCost = inputCost + outputCost
+    
+    return { inputTokens, outputTokens, totalTokens, inputCost, outputCost, totalCost }
+  }
+
+  const tokenData = calculateTokens()
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  const saveChat = () => {
+    if (!prompt && generatedImages.length === 0) return
+    
+    const newChat: ChatSession = {
+      id: currentChatId || `chat-${Date.now()}`,
+      name: chatName || `Chat ${chats.length + 1}`,
+      prompt,
+      images: generatedImages,
+      createdAt: new Date().toISOString(),
+      folder: selectedFolder
+    }
+    
+    if (currentChatId) {
+      setChats(chats.map(c => c.id === currentChatId ? newChat : c))
+    } else {
+      setChats([newChat, ...chats])
+      setCurrentChatId(newChat.id)
+    }
+  }
+
+  const loadChat = (chat: ChatSession) => {
+    setCurrentChatId(chat.id)
+    setChatName(chat.name)
+    setPrompt(chat.prompt)
+    setGeneratedImages(chat.images)
+  }
+
+  const deleteChat = (id: string) => {
+    setChats(chats.filter(c => c.id !== id))
+    if (currentChatId === id) {
+      setCurrentChatId(null)
+      setChatName('')
+      setPrompt('')
+      setGeneratedImages([])
+    }
+  }
+
+  const togglePin = (id: string) => {
+    setChats(chats.map(c => c.id === id ? { ...c, pinned: !c.pinned } : c))
+  }
+
+  const generateImages = async () => {
+    if (!apiKey || !prompt) return
+    setIsGenerating(true)
+    setTimer(0)
+    
+    try {
+      const res = await fetch('/api/generate-images', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          apiKey,
+          prompt,
+          batchSize,
+          aspectRatio,
+          resolution,
+          nsfwBypass
+        })
+      })
+      
+      if (res.ok) {
+        const data = await res.json()
+        setGeneratedImages(data.images || [])
+      }
+    } catch (e) {
+      console.error('Generation failed:', e)
+    }
+    
+    setIsGenerating(false)
+  }
+
+  return (
+    <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '20px' }}>
+      {/* Header */}
+      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+        <h2 style={{ fontSize: '1.5rem', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+          <ImageIcon size={24} color="#10b981" /> Nano Banana Pro Image Generation
+        </h2>
+        <p style={{ color: '#888', fontSize: '0.9rem' }}>
+          Powered by Gemini 3 Pro • Less censorship • Batch generation
+        </p>
+      </div>
+
+      {/* Paid Subscriber Warning */}
+      <div style={{ 
+        background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.2))', 
+        border: '1px solid rgba(245, 158, 11, 0.5)', 
+        borderRadius: '8px', 
+        padding: '12px 16px',
+        marginBottom: '20px',
+        textAlign: 'center'
+      }}>
+        <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#f59e0b', letterSpacing: '0.5px' }}>
+          ⚠️ EXCLUSIVELY FOR PAID GEMINI 3 PRO SUBSCRIBERS
+        </div>
+        <div style={{ fontSize: '0.7rem', color: '#d97706', marginTop: '4px', fontStyle: 'italic' }}>
+          Restricted Access: Not for Free Version 2.5 Flash
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr 350px', gap: '24px' }}>
+        {/* Left: Chat Management Sidebar */}
+        <div style={{ background: '#111', border: '1px solid #333', borderRadius: '12px', padding: '16px', height: 'fit-content', maxHeight: 'calc(100vh - 200px)', overflow: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px', color: '#fff' }}>
+              <FolderOpen size={16} /> Chats
+            </h3>
+            <button
+              onClick={() => {
+                setCurrentChatId(null)
+                setChatName('')
+                setPrompt('')
+                setGeneratedImages([])
+              }}
+              style={{
+                padding: '4px 8px',
+                background: '#10b981',
+                border: 'none',
+                borderRadius: '4px',
+                color: '#000',
+                cursor: 'pointer',
+                fontSize: '0.7rem'
+              }}
+            >
+              + New
+            </button>
+          </div>
+
+          {/* Folder Filter */}
+          <select
+            value={selectedFolder}
+            onChange={(e) => setSelectedFolder(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '8px',
+              background: '#1a1a1a',
+              border: '1px solid #333',
+              borderRadius: '6px',
+              color: '#fff',
+              fontSize: '0.8rem',
+              marginBottom: '12px',
+              cursor: 'pointer'
+            }}
+          >
+            {folders.map(f => <option key={f} value={f}>{f}</option>)}
+          </select>
+
+          {/* Chat List */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {[...chats]
+              .filter(c => c.folder === selectedFolder)
+              .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
+              .map(chat => (
+              <div
+                key={chat.id}
+                onClick={() => loadChat(chat)}
+                style={{
+                  padding: '10px',
+                  background: currentChatId === chat.id ? 'rgba(16, 185, 129, 0.2)' : '#1a1a1a',
+                  border: `1px solid ${currentChatId === chat.id ? '#10b981' : '#333'}`,
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                  {chat.pinned && <Pin size={12} color="#f59e0b" />}
+                  <span style={{ fontSize: '0.8rem', color: '#fff', fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                    {chat.name}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.7rem', color: '#666', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>{chat.images.length} img</span>
+                  <span>•</span>
+                  <span>{new Date(chat.createdAt).toLocaleDateString()}</span>
+                </div>
+                <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); togglePin(chat.id) }}
+                    style={{
+                      padding: '2px 6px',
+                      background: 'transparent',
+                      border: '1px solid #333',
+                      borderRadius: '4px',
+                      color: chat.pinned ? '#f59e0b' : '#666',
+                      cursor: 'pointer',
+                      fontSize: '0.65rem'
+                    }}
+                  >
+                    <Pin size={10} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); deleteChat(chat.id) }}
+                    style={{
+                      padding: '2px 6px',
+                      background: 'transparent',
+                      border: '1px solid #333',
+                      borderRadius: '4px',
+                      color: '#ef4444',
+                      cursor: 'pointer',
+                      fontSize: '0.65rem'
+                    }}
+                  >
+                    <Trash2 size={10} />
+                  </button>
+                </div>
+              </div>
+            ))}
+            {chats.filter(c => c.folder === selectedFolder).length === 0 && (
+              <div style={{ textAlign: 'center', padding: '20px', color: '#666', fontSize: '0.75rem' }}>
+                No chats in this folder
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Middle: Main Generation Area */}
+        <div>
+          {/* API Key Input */}
+          <div style={{ background: '#111', border: '1px solid #333', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', color: '#10b981' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Key size={16} /> API Configuration
+              </div>
+              {savedApiKey && (
+                <span style={{ color: '#10b981', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Zap size={12} /> Saved
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                type="password"
+                placeholder="Enter Google AI API Key (AIzaxxxxxxxxx...)"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: '10px 12px',
+                  background: '#1a1a1a',
+                  border: '1px solid #333',
+                  borderRadius: '6px',
+                  color: '#fff',
+                  fontSize: '0.85rem'
+                }}
+              />
+              {savedApiKey && (
+                <button
+                  onClick={removeApiKey}
+                  title="Remove saved API key"
+                  style={{
+                    padding: '10px 12px',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid rgba(239, 68, 68, 0.5)',
+                    borderRadius: '6px',
+                    color: '#ef4444',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '6px' }}>
+              Your API key is stored locally and never sent to our servers.
+            </div>
+          </div>
+
+          {/* Chat Name Input */}
+          <div style={{ marginBottom: '16px' }}>
+            <input
+              type="text"
+              placeholder="Chat name (optional)..."
+              value={chatName}
+              onChange={(e) => setChatName(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                background: '#1a1a1a',
+                border: '1px solid #333',
+                borderRadius: '6px',
+                color: '#fff',
+                fontSize: '0.9rem'
+              }}
+            />
+          </div>
+
+          {/* Prompt Input */}
+          <div style={{ background: '#111', border: '1px solid #333', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
+            <textarea
+              placeholder="Describe the image you want to generate... (NSFW prompts supported with bypass)"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              style={{
+                width: '100%',
+                minHeight: '120px',
+                padding: '12px',
+                background: '#1a1a1a',
+                border: '1px solid #333',
+                borderRadius: '6px',
+                color: '#fff',
+                fontSize: '0.9rem',
+                resize: 'vertical'
+              }}
+            />
+            
+            {/* Batch Size */}
+            <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '0.8rem', color: '#888' }}>Batch Size:</span>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {[1, 2, 3, 4].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => setBatchSize(n)}
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: batchSize === n ? '#10b981' : '#1a1a1a',
+                      color: batchSize === n ? '#000' : '#fff',
+                      cursor: 'pointer',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Generate & Save Buttons */}
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={generateImages}
+              disabled={isGenerating || !apiKey || !prompt}
+              style={{
+                flex: 1,
+                padding: '14px',
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                border: 'none',
+                borderRadius: '8px',
+                color: '#000',
+                fontWeight: 'bold',
+                fontSize: '1rem',
+                cursor: 'pointer',
+                opacity: (isGenerating || !apiKey || !prompt) ? 0.5 : 1
+              }}
+            >
+              {isGenerating ? 'Generating...' : `Generate ${batchSize > 1 ? batchSize + ' Images' : 'Image'}`}
+            </button>
+            {(prompt || generatedImages.length > 0) && (
+              <button
+                onClick={saveChat}
+                style={{
+                  padding: '14px 20px',
+                  background: '#1a1a1a',
+                  border: '1px solid #333',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Save size={16} /> Save
+              </button>
+            )}
+          </div>
+
+          {/* Generated Images Grid */}
+          {generatedImages.length > 0 && (
+            <div style={{ marginTop: '24px' }}>
+              <h3 style={{ fontSize: '1rem', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CheckCircle size={16} color="#10b981" /> Generated Images
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                {generatedImages.map((img, i) => (
+                  <div key={i} style={{ background: '#111', borderRadius: '8px', overflow: 'hidden', border: '1px solid #333' }}>
+                    <img src={img} alt={`Generated ${i + 1}`} style={{ width: '100%', height: 'auto', display: 'block' }} />
+                    <div style={{ padding: '8px', display: 'flex', gap: '8px' }}>
+                      <button 
+                        onClick={() => {}}
+                        style={{ flex: 1, padding: '6px', background: '#333', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', fontSize: '0.75rem' }}
+                      >
+                        <Download size={12} /> Save
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right: Settings Panel */}
+        <div style={{ background: '#111', border: '1px solid #333', borderRadius: '12px', padding: '16px', height: 'fit-content' }}>
+          <h3 style={{ fontSize: '0.9rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Settings2 size={16} /> Generation Settings
+          </h3>
+
+          {/* Aspect Ratio */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ fontSize: '0.8rem', color: '#888', display: 'block', marginBottom: '8px' }}>Aspect Ratio</label>
+            <select
+              value={aspectRatio}
+              onChange={(e) => setAspectRatio(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px',
+                background: '#1a1a1a',
+                border: '1px solid #333',
+                borderRadius: '6px',
+                color: '#fff',
+                cursor: 'pointer'
+              }}
+            >
+              {aspectRatios.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+
+          {/* Resolution */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ fontSize: '0.8rem', color: '#888', display: 'block', marginBottom: '8px' }}>Resolution</label>
+            <select
+              value={resolution}
+              onChange={(e) => setResolution(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px',
+                background: '#1a1a1a',
+                border: '1px solid #333',
+                borderRadius: '6px',
+                color: '#fff',
+                cursor: 'pointer'
+              }}
+            >
+              {resolutions.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+
+          {/* NSFW Bypass Toggle */}
+          <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '6px', padding: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontSize: '0.8rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <CheckCircle size={14} /> NSFW Bypass
+              </span>
+              <label className="toggle-switch" style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px' }}>
+                <input 
+                  type="checkbox" 
+                  checked={nsfwBypass}
+                  onChange={(e) => setNsfwBypass(e.target.checked)}
+                  style={{ opacity: 0, width: 0, height: 0 }}
+                />
+                <span style={{ 
+                  position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+                  backgroundColor: nsfwBypass ? '#10b981' : '#333',
+                  borderRadius: '24px', transition: '.3s'
+                }}>
+                  <span style={{
+                    position: 'absolute', content: '""', height: '18px', width: '18px',
+                    left: nsfwBypass ? '22px' : '3px', bottom: '3px',
+                    backgroundColor: 'white', borderRadius: '50%', transition: '.3s'
+                  }}/>
+                </span>
+              </label>
+            </div>
+            <div style={{ fontSize: '0.7rem', color: '#888' }}>
+              {nsfwBypass ? 'Using prompt obfuscation and token splitting.' : 'Standard generation with safety filters.'}
+            </div>
+          </div>
+
+          {/* Timer & Token Counter */}
+          <div style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', padding: '12px', marginTop: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: '0.7rem', color: '#888' }}>Time Elapsed</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#10b981', fontFamily: 'monospace' }}>
+                  {formatTime(timer)}
+                </div>
+              </div>
+              <div 
+                style={{ textAlign: 'right', cursor: 'pointer', position: 'relative' }}
+                onMouseEnter={() => setShowTokenTooltip(true)}
+                onMouseLeave={() => setShowTokenTooltip(false)}
+              >
+                <div style={{ fontSize: '0.7rem', color: '#888' }}>Est. Tokens</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#a855f7' }}>
+                  {tokenData.totalTokens.toLocaleString()}
+                </div>
+                
+                {/* Token Cost Tooltip */}
+                {showTokenTooltip && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '100%',
+                    right: 0,
+                    marginBottom: '8px',
+                    background: '#1a1a1a',
+                    border: '1px solid #333',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    minWidth: '220px',
+                    zIndex: 100,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+                  }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#fff', marginBottom: '8px', borderBottom: '1px solid #333', paddingBottom: '4px' }}>
+                      Token Usage Details
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'auto auto auto', gap: '4px 12px', fontSize: '0.7rem' }}>
+                      <span style={{ color: '#888' }}>Input:</span>
+                      <span style={{ color: '#fff', fontFamily: 'monospace' }}>{tokenData.inputTokens.toLocaleString()}</span>
+                      <span style={{ color: '#888' }}>(${tokenData.inputCost.toFixed(4)})</span>
+                      
+                      <span style={{ color: '#888' }}>Output:</span>
+                      <span style={{ color: '#fff', fontFamily: 'monospace' }}>{tokenData.outputTokens.toLocaleString()}</span>
+                      <span style={{ color: '#888' }}>(${tokenData.outputCost.toFixed(4)})</span>
+                      
+                      <span style={{ color: '#10b981', fontWeight: 'bold' }}>Total:</span>
+                      <span style={{ color: '#10b981', fontFamily: 'monospace', fontWeight: 'bold' }}>{tokenData.totalTokens.toLocaleString()}</span>
+                      <span style={{ color: '#10b981', fontWeight: 'bold' }}>(${tokenData.totalCost.toFixed(4)})</span>
+                    </div>
+                    <div style={{ fontSize: '0.65rem', color: '#666', marginTop: '8px', fontStyle: 'italic' }}>
+                      *Based on Gemini 3 Pro pricing
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // ═══ MAIN COMPONENT ═══
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function App() {
   // ── Engine State ──
-  const [engine, setEngine] = useState<'zimage' | 'nbp3' | 'watermark' | 'armscaler'>('zimage')
+  const [engine, setEngine] = useState<'zimage' | 'nbp3' | 'watermark' | 'armscaler' | 'imggen'>('zimage')
 
   // ── Shared Config ──
   const [ethnicity, setEthnicity] = useState('ukrainian')
@@ -647,7 +1295,7 @@ function App() {
   // ── NEW: Image Analysis State ──
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false)
   const [analyzedImage, setAnalyzedImage] = useState<string | null>(null)
-  const [cachedImageDescription, setCachedImageDescription] = useState<string>('')
+  const [, setCachedImageDescription] = useState<string>('')
   const [isDragOver, setIsDragOver] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -1715,7 +2363,17 @@ function App() {
               className={`engine-btn nbp3 ${engine === 'nbp3' ? 'active' : ''}`}
               onClick={() => setEngine('nbp3')}
             >
-              <Cpu size={16} /> Nano Banana Pro 3
+              <Cpu size={16} /> Gemini 3 Pro
+            </button>
+            <button 
+              className={`engine-btn nbpgen ${engine === 'imggen' ? 'active' : ''}`}
+              onClick={() => setEngine('imggen')}
+              style={{ 
+                background: engine === 'imggen' ? 'linear-gradient(135deg, #10b981, #059669)' : 'transparent',
+                color: engine === 'imggen' ? 'white' : '#888'
+              }}
+            >
+              <ImageIcon size={16} /> NBP Image Gen
             </button>
             <button 
               className={`engine-btn watermark ${engine === 'watermark' ? 'active' : ''}`}
@@ -1743,8 +2401,13 @@ function App() {
         <ARMscaler />
       )}
 
+      {/* ═══ IMAGE GENERATION VIEW ═══ */}
+      {engine === 'imggen' && (
+        <ImageGenerationView />
+      )}
+
       {/* ═══ MAIN LAYOUT (Prompt Generators) ═══ */}
-      {engine !== 'watermark' && engine !== 'armscaler' && (
+      {engine !== 'watermark' && engine !== 'armscaler' && engine !== 'imggen' && (
       <div className="main-layout">
         
         {/* ═══ LEFT: GENERATE PANEL ═══ */}

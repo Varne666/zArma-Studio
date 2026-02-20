@@ -1,4 +1,5 @@
-ROOT="/home/arma/Downloads/zArma Studio"
+#!/bin/bash
+ROOT="/home/arma/Desktop/zArma Studio"
 
 # Kill existing
 pkill -9 -u "$USER" -f "node .*server\.js" 2>/dev/null || true
@@ -13,8 +14,8 @@ sleep 1
 
 # Backend 3001
 echo "📡 Starting Backend..."
-gnome-terminal --title="BACKEND-3001" -- bash -lc \
-'cd "'"$ROOT"'/app/backend" && PORT=3001 node server.js' &
+cd "$ROOT/app/backend" && PORT=3001 node server.js &
+BACKEND_PID=$!
 
 # Wait for backend
 echo "⏳ Waiting for backend..."
@@ -25,9 +26,11 @@ done
 
 # Frontend 3000
 echo "🎨 Starting Frontend..."
-gnome-terminal --title="FRONTEND-3000" -- bash -lc \
-'cd "'"$ROOT"'/app" && npm run dev -- --host' &
+cd "$ROOT/app" && npm run dev -- --host &
+FRONTEND_PID=$!
 
 sleep 4
 xdg-open "http://localhost:3000"
 echo "🌐 Opening browser..."
+echo "Backend PID: $BACKEND_PID"
+echo "Frontend PID: $FRONTEND_PID"
