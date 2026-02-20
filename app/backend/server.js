@@ -1584,20 +1584,42 @@ app.post('/api/generate-images', async (req, res) => {
       // Not JSON, use as-is
     }
     
+    // Map resolution to image size hint
+    const sizeMap = {
+      '1K': '1024x1024',
+      '2K': '2048x2048', 
+      '4K': '4096x4096'
+    };
+    const sizeHint = sizeMap[resolution] || '1024x1024';
+    
+    // Map aspect ratio
+    const aspectMap = {
+      '1:1': '1:1',
+      '9:16': '9:16',
+      '16:9': '16:9',
+      '3:4': '3:4',
+      '4:3': '4:3',
+      '3:2': '3:2'
+    };
+    const aspect = aspectMap[aspectRatio] || '1:1';
+    
     // Generate images using Gemini 3 Pro Image (Nano Banana Pro 3)
     for (let i = 0; i < Math.min(batchSize, 4); i++) {
       try {
+        // Add resolution and aspect ratio to prompt since API doesn't directly support them
+        const enhancedPrompt = `${finalPrompt}. High resolution ${sizeHint}, ${aspect} aspect ratio.`;
+        
         const response = await axios.post(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${apiKey}`,
           {
-            contents: [{ parts: [{ text: finalPrompt }] }],
+            contents: [{ parts: [{ text: enhancedPrompt }] }],
             generationConfig: {
               responseModalities: ["Text", "Image"],
               temperature: parseFloat(temperature),
               topP: parseFloat(topP),
               maxOutputTokens: parseInt(outputLength),
               imageConfig: { 
-                aspectRatio: aspectRatio === '1:1' ? '1:1' : aspectRatio === '9:16' ? '9:16' : aspectRatio === '16:9' ? '16:9' : aspectRatio === '3:4' ? '3:4' : aspectRatio === '4:3' ? '4:3' : '1:1'
+                aspectRatio: aspect
               }
             }
           },

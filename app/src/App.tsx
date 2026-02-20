@@ -636,20 +636,38 @@ function ImageGenerationView() {
     localStorage.setItem('nbp_chats', JSON.stringify(chats))
   }, [chats])
 
-  // Timer effect
+  // Timer effect - using timestamp for accuracy when tabbed out
+  const startTimeRef = useRef<number>(0);
+  
   useEffect(() => {
     if (isGenerating) {
+      startTimeRef.current = Date.now();
       timerRef.current = setInterval(() => {
-        setTimer(prev => prev + 1)
-      }, 1000)
+        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        setTimer(elapsed);
+      }, 1000);
     } else {
-      if (timerRef.current) clearInterval(timerRef.current)
-      setTimer(0)
+      if (timerRef.current) clearInterval(timerRef.current);
+      setTimer(0);
     }
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
-    }
-  }, [isGenerating])
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isGenerating]);
+  
+  // Handle visibility change to prevent stopping generation when tabbed out
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      // Keep generation running even when hidden
+      if (document.hidden && isGenerating) {
+        // Recalculate timer when tab becomes visible again
+        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        setTimer(elapsed);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isGenerating]);
 
   // Real-time token calculation
   const calculateTokens = () => {
@@ -723,6 +741,7 @@ function ImageGenerationView() {
       const res = await fetch('/api/generate-images', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        keepalive: true,
         body: JSON.stringify({
           apiKey,
           prompt,
