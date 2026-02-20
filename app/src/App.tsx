@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { 
   Sparkles, 
   Save, 
@@ -26,9 +26,34 @@ import {
   Zap,
   Eraser,
   Maximize2,
+  ImagePlus,
+  Settings2,
+  Sliders,
+  RotateCcw,
+  Percent,
+  Plus,
+  ChevronDown,
+  Upload,
+  MessageSquare,
+  Type,
+  Gem,
+  Heart,
+  Moon,
+  Droplets,
+  Home,
+  Wine,
+  Bath,
+  Umbrella,
+  Sparkle,
+  Activity,
+  Wand2,
 } from 'lucide-react'
 import WatermarkRemover from './components/WatermarkRemover'
 import ARMscaler from './components/ARMscaler'
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ═══ TYPES & INTERFACES ═══
+// ═══════════════════════════════════════════════════════════════════════════════
 
 interface PromptData {
   id: string
@@ -44,6 +69,74 @@ interface PromptData {
   favorite: boolean
   createdAt: string
 }
+
+interface PresetConfig {
+  id: string
+  name: string
+  mode: 'sfw' | 'nsfw'
+  ethnicity: string
+  age: string
+  skinTone: string
+  height: string
+  eyeColor: string
+  hairColor: string
+  bodyType: string
+  background: string
+  fitType: string
+  breastSize?: string
+  bootySize?: string
+  pussyType?: string
+  breastVisibility?: string
+  bootyVisibility?: string
+  pussyVisibility?: string
+}
+
+interface CustomPreset {
+  id: string
+  name: string
+  config: Partial<PresetConfig>
+  createdAt: string
+}
+
+interface TemplateConfig {
+  id: string
+  name: string
+  description: string
+  settings: Partial<AllSettings>
+}
+
+interface AllSettings {
+  engine: 'zimage' | 'nbp3' | 'watermark' | 'armscaler'
+  ethnicity: string
+  skinTone: string
+  age: string
+  height: string
+  eyeColor: string
+  hairColor: string
+  bodyType: string
+  background: string
+  fitType: string
+  mode: 'sfw' | 'nsfw'
+  breastSizeMode: 'simple' | 'advanced'
+  breastSizeSimple: string
+  breastSizeAdvanced: string
+  bootySize: string
+  pussyType: string
+  breastVisibility: string
+  bootyVisibility: string
+  pussyVisibility: string
+  nbpOutputFormat: 'prose' | 'json'
+  nbpPromptStyle: string
+  nbpCameraDevice: string
+  nbpAesthetic: string
+  nbpAspectRatio: string
+  nbpIncludeNegative: boolean
+  nbpDetailLevel: string
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ═══ CONSTANTS & DATA ═══
+// ═══════════════════════════════════════════════════════════════════════════════
 
 const ethnicities = [
   'custom',
@@ -190,6 +283,296 @@ const nbpDetailLevels = [
   { value: 'maximum', label: 'Maximum (ControlNet)' }
 ]
 
+// Import additional presets
+import { ADDITIONAL_SFW_PRESETS, ADDITIONAL_NSFW_PRESETS } from './presets'
+
+// ── Built-in Presets ──
+const BUILT_IN_PRESETS: PresetConfig[] = [
+  // SFW Presets
+  {
+    id: 'preset-gym-girl',
+    name: 'Gym Girl',
+    mode: 'sfw',
+    ethnicity: 'ukrainian',
+    age: '22',
+    skinTone: 'beige',
+    height: '5ft 6in (168cm)',
+    eyeColor: 'blue',
+    hairColor: 'blonde',
+    bodyType: 'fit',
+    background: 'gym',
+    fitType: 'sports bra and shorts'
+  },
+  {
+    id: 'preset-beach-babe',
+    name: 'Beach Babe',
+    mode: 'sfw',
+    ethnicity: 'brazilian',
+    age: '24',
+    skinTone: 'tan',
+    height: '5ft 7in (170cm)',
+    eyeColor: 'hazel',
+    hairColor: 'brunette',
+    bodyType: 'curvy',
+    background: 'beach',
+    fitType: 'swimwear'
+  },
+  {
+    id: 'preset-y2k',
+    name: 'Y2K Aesthetic',
+    mode: 'sfw',
+    ethnicity: 'british',
+    age: '21',
+    skinTone: 'fair',
+    height: '5ft 5in (165cm)',
+    eyeColor: 'green',
+    hairColor: 'platinum blonde',
+    bodyType: 'slim',
+    background: 'car interior',
+    fitType: 'crop top and shorts'
+  },
+  {
+    id: 'preset-influencer',
+    name: 'Influencer',
+    mode: 'sfw',
+    ethnicity: 'colombian',
+    age: '23',
+    skinTone: 'olive',
+    height: '5ft 8in (173cm)',
+    eyeColor: 'brown',
+    hairColor: 'black',
+    bodyType: 'toned',
+    background: 'mirror selfie',
+    fitType: 'tight leggings and crop top'
+  },
+  {
+    id: 'preset-casual-home',
+    name: 'Casual Home',
+    mode: 'sfw',
+    ethnicity: 'swedish',
+    age: '20',
+    skinTone: 'porcelain',
+    height: '5ft 4in (163cm)',
+    eyeColor: 'blue',
+    hairColor: 'dirty blonde',
+    bodyType: 'average',
+    background: 'living room',
+    fitType: 'oversized sweater'
+  },
+  {
+    id: 'preset-cocktail',
+    name: 'Cocktail Party',
+    mode: 'sfw',
+    ethnicity: 'italian',
+    age: '26',
+    skinTone: 'medium',
+    height: '5ft 6in (168cm)',
+    eyeColor: 'amber',
+    hairColor: 'brunette',
+    bodyType: 'curvy',
+    background: 'hotel room',
+    fitType: 'cocktail dress'
+  },
+  // NSFW Presets
+  {
+    id: 'preset-bedroom-mirror',
+    name: 'Bedroom Mirror',
+    mode: 'nsfw',
+    ethnicity: 'ukrainian',
+    age: '22',
+    skinTone: 'beige',
+    height: '5ft 6in (168cm)',
+    eyeColor: 'blue',
+    hairColor: 'blonde',
+    bodyType: 'fit',
+    background: 'mirror selfie',
+    fitType: 'lingerie',
+    breastSize: 'large',
+    bootySize: 'large',
+    pussyType: 'innie',
+    breastVisibility: 'tease',
+    bootyVisibility: 'show',
+    pussyVisibility: 'hide'
+  },
+  {
+    id: 'preset-late-night',
+    name: 'Late Night',
+    mode: 'nsfw',
+    ethnicity: 'russian',
+    age: '24',
+    skinTone: 'fair',
+    height: '5ft 7in (170cm)',
+    eyeColor: 'grey',
+    hairColor: 'platinum blonde',
+    bodyType: 'slim',
+    background: 'bedroom',
+    fitType: 'towel only',
+    breastSize: 'medium',
+    bootySize: 'above average',
+    pussyType: 'smooth',
+    breastVisibility: 'show',
+    bootyVisibility: 'tease',
+    pussyVisibility: 'hide'
+  },
+  {
+    id: 'preset-fresh-out',
+    name: 'Fresh Out',
+    mode: 'nsfw',
+    ethnicity: 'brazilian',
+    age: '23',
+    skinTone: 'tan',
+    height: '5ft 8in (173cm)',
+    eyeColor: 'hazel',
+    hairColor: 'brunette',
+    bodyType: 'curvy',
+    background: 'bathroom',
+    fitType: 'robe',
+    breastSize: 'extra large',
+    bootySize: 'extra large',
+    pussyType: 'natural bush',
+    breastVisibility: 'show',
+    bootyVisibility: 'show',
+    pussyVisibility: 'tease'
+  },
+  {
+    id: 'preset-boudoir',
+    name: 'Boudoir',
+    mode: 'nsfw',
+    ethnicity: 'french',
+    age: '25',
+    skinTone: 'porcelain',
+    height: '5ft 5in (165cm)',
+    eyeColor: 'green',
+    hairColor: 'auburn',
+    bodyType: 'voluptuous',
+    background: 'bedroom',
+    fitType: 'bodysuit',
+    breastSize: 'above average',
+    bootySize: 'large',
+    pussyType: 'innie',
+    breastVisibility: 'seductive',
+    bootyVisibility: 'seductive',
+    pussyVisibility: 'tease'
+  },
+  {
+    id: 'preset-bath-time',
+    name: 'Bath Time',
+    mode: 'nsfw',
+    ethnicity: 'japanese',
+    age: '21',
+    skinTone: 'light',
+    height: '5ft 3in (160cm)',
+    eyeColor: 'brown',
+    hairColor: 'black',
+    bodyType: 'petite',
+    background: 'shower',
+    fitType: 'towel only',
+    breastSize: 'small',
+    bootySize: 'small',
+    pussyType: 'smooth',
+    breastVisibility: 'show',
+    bootyVisibility: 'show',
+    pussyVisibility: 'hide'
+  },
+  {
+    id: 'preset-poolside-glam',
+    name: 'Poolside Glam',
+    mode: 'nsfw',
+    ethnicity: 'mexican',
+    age: '24',
+    skinTone: 'olive',
+    height: '5ft 6in (168cm)',
+    eyeColor: 'amber',
+    hairColor: 'chestnut',
+    bodyType: 'thick',
+    background: 'poolside',
+    fitType: 'swimwear',
+    breastSize: 'large',
+    bootySize: 'above average',
+    pussyType: 'smooth',
+    breastVisibility: 'show',
+    bootyVisibility: 'show',
+    pussyVisibility: 'hide'
+  },
+  // Additional SFW Presets (24 more)
+  ...ADDITIONAL_SFW_PRESETS.map(p => ({ ...p, isCustom: false })),
+  // Additional NSFW Presets (24 more)
+  ...ADDITIONAL_NSFW_PRESETS.map(p => ({ ...p, isCustom: false }))
+]
+
+// ── Dynamic Templates ──
+const DYNAMIC_TEMPLATES: TemplateConfig[] = [
+  {
+    id: 'template-vanilla',
+    name: 'Vanilla Portrait',
+    description: 'Clean, professional portrait photography',
+    settings: {
+      nbpPromptStyle: 'portrait',
+      nbpAesthetic: 'studio_editorial',
+      nbpDetailLevel: 'standard',
+      nbpIncludeNegative: true
+    }
+  },
+  {
+    id: 'template-selfie-queen',
+    name: 'Selfie Queen',
+    description: 'Instagram-style mirror and phone selfies',
+    settings: {
+      nbpPromptStyle: 'mirror_selfie',
+      nbpAesthetic: 'casual_instagram',
+      nbpCameraDevice: 'iPhone 15 Pro',
+      nbpDetailLevel: 'ultra',
+      nbpIncludeNegative: true
+    }
+  },
+  {
+    id: 'template-y2k-baddie',
+    name: 'Y2K Baddie',
+    description: '2000s aesthetic with flash and grain',
+    settings: {
+      nbpPromptStyle: 'candid',
+      nbpAesthetic: 'y2k_flash',
+      nbpCameraDevice: 'Canon PowerShot',
+      nbpDetailLevel: 'ultra',
+      nbpIncludeNegative: true
+    }
+  },
+  {
+    id: 'template-golden-hour',
+    name: 'Golden Hour Goddess',
+    description: 'Warm sunset lighting, outdoor vibes',
+    settings: {
+      nbpPromptStyle: 'lifestyle',
+      nbpAesthetic: 'golden_hour',
+      nbpDetailLevel: 'ultra',
+      nbpIncludeNegative: true
+    }
+  },
+  {
+    id: 'template-club-night',
+    name: 'Club Night',
+    description: 'Nightclub flash photography',
+    settings: {
+      nbpPromptStyle: 'fashion_snapshot',
+      nbpAesthetic: 'nightclub',
+      nbpDetailLevel: 'maximum',
+      nbpIncludeNegative: true
+    }
+  },
+  {
+    id: 'template-maximum-control',
+    name: 'Maximum ControlNet',
+    description: 'Highest detail for ControlNet workflows',
+    settings: {
+      nbpDetailLevel: 'maximum',
+      nbpIncludeNegative: true
+    }
+  }
+]
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ═══ MAIN COMPONENT ═══
+// ═══════════════════════════════════════════════════════════════════════════════
 
 function App() {
   // ── Engine State ──
@@ -256,9 +639,35 @@ function App() {
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<PromptData | null>(null)
   const [toast, setToast] = useState<{message: string, visible: boolean}>({message: '', visible: false})
 
+  // ── NEW: Custom Instructions State ──
+  const [customInstructionsEnabled, setCustomInstructionsEnabled] = useState(false)
+  const [customInstructions, setCustomInstructions] = useState('')
+  const [customInstructionsActive, setCustomInstructionsActive] = useState(false)
+
+  // ── NEW: Image Analysis State ──
+  const [isAnalyzingImage, setIsAnalyzingImage] = useState(false)
+  const [analyzedImage, setAnalyzedImage] = useState<string | null>(null)
+  const [cachedImageDescription, setCachedImageDescription] = useState<string>('')
+  const [isDragOver, setIsDragOver] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // ── NEW: Custom Presets State ──
+  const [myPresets, setMyPresets] = useState<CustomPreset[]>([])
+  const [showNewPresetModal, setShowNewPresetModal] = useState(false)
+  const [newPresetName, setNewPresetName] = useState('')
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('')
+
+  // ── NEW: Panel Collapse States ──
+  const [presetsCollapsed, setPresetsCollapsed] = useState(false)
+  const [configCollapsed, setConfigCollapsed] = useState(false)
+
+  // ── NEW: My Presets Section Collapse ──
+  const [myPresetsCollapsed, setMyPresetsCollapsed] = useState(false)
+
   useEffect(() => {
     checkOllama()
     loadHistory()
+    loadMyPresets()
     const interval = setInterval(checkOllama, 10000)
     return () => clearInterval(interval)
   }, [])
@@ -293,6 +702,318 @@ function App() {
     }
   }
 
+  // ── NEW: Load My Presets from localStorage ──
+  const loadMyPresets = () => {
+    try {
+      const saved = localStorage.getItem('zarma-custom-presets')
+      if (saved) {
+        setMyPresets(JSON.parse(saved))
+      }
+    } catch (error) {
+      console.error('Failed to load presets:', error)
+    }
+  }
+
+  // ── NEW: Save My Presets to localStorage ──
+  const saveMyPresets = (presets: CustomPreset[]) => {
+    try {
+      localStorage.setItem('zarma-custom-presets', JSON.stringify(presets))
+      setMyPresets(presets)
+    } catch (error) {
+      console.error('Failed to save presets:', error)
+    }
+  }
+
+  // ── NEW: Create New Preset ──
+  const createNewPreset = () => {
+    if (!newPresetName.trim()) return
+    
+    const newPreset: CustomPreset = {
+      id: `custom-${Date.now()}`,
+      name: newPresetName.trim(),
+      config: {
+        ethnicity: getValue(ethnicity, customEthnicity),
+        skinTone: getValue(skinTone, customSkinTone),
+        age: getValue(age, customAge),
+        height: getValue(height, customHeight),
+        eyeColor: getValue(eyeColor, customEyeColor),
+        hairColor: getValue(hairColor, customHairColor),
+        bodyType: getValue(bodyType, customBodyType),
+        background: getValue(background, customBackground),
+        fitType: getValue(fitType, customFitType),
+        mode,
+        breastSize: mode === 'nsfw' ? getBreastSize() : undefined,
+        bootySize: mode === 'nsfw' ? getValue(bootySize, customBootySize) : undefined,
+        pussyType: mode === 'nsfw' ? getValue(pussyType, customPussyType) : undefined,
+        breastVisibility: mode === 'nsfw' ? breastVisibility : undefined,
+        bootyVisibility: mode === 'nsfw' ? bootyVisibility : undefined,
+        pussyVisibility: mode === 'nsfw' ? pussyVisibility : undefined
+      },
+      createdAt: new Date().toISOString()
+    }
+    
+    const updated = [...myPresets, newPreset]
+    saveMyPresets(updated)
+    setNewPresetName('')
+    setShowNewPresetModal(false)
+    showToast('Preset saved!')
+  }
+
+  // ── NEW: Delete Custom Preset ──
+  const deleteCustomPreset = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!confirm('Delete this preset?')) return
+    const updated = myPresets.filter(p => p.id !== id)
+    saveMyPresets(updated)
+    showToast('Preset deleted')
+  }
+
+  // ── NEW: Load Custom Preset ──
+  const loadCustomPreset = (preset: CustomPreset) => {
+    const cfg = preset.config
+    if (cfg.ethnicity) {
+      const isCustom = !ethnicities.includes(cfg.ethnicity)
+      setEthnicity(isCustom ? 'custom' : cfg.ethnicity)
+      if (isCustom) setCustomEthnicity(cfg.ethnicity)
+    }
+    if (cfg.skinTone) {
+      const isCustom = !skinTones.includes(cfg.skinTone)
+      setSkinTone(isCustom ? 'custom' : cfg.skinTone)
+      if (isCustom) setCustomSkinTone(cfg.skinTone)
+    }
+    if (cfg.age) {
+      const isCustom = !ages.includes(cfg.age)
+      setAge(isCustom ? 'custom' : cfg.age)
+      if (isCustom) setCustomAge(cfg.age)
+    }
+    if (cfg.height) {
+      const isCustom = !heights.includes(cfg.height)
+      setHeight(isCustom ? 'custom' : cfg.height)
+      if (isCustom) setCustomHeight(cfg.height)
+    }
+    if (cfg.eyeColor) {
+      const isCustom = !eyeColors.includes(cfg.eyeColor)
+      setEyeColor(isCustom ? 'custom' : cfg.eyeColor)
+      if (isCustom) setCustomEyeColor(cfg.eyeColor)
+    }
+    if (cfg.hairColor) {
+      const isCustom = !hairColors.includes(cfg.hairColor)
+      setHairColor(isCustom ? 'custom' : cfg.hairColor)
+      if (isCustom) setCustomHairColor(cfg.hairColor)
+    }
+    if (cfg.bodyType) {
+      const isCustom = !bodyTypes.includes(cfg.bodyType)
+      setBodyType(isCustom ? 'custom' : cfg.bodyType)
+      if (isCustom) setCustomBodyType(cfg.bodyType)
+    }
+    if (cfg.background) {
+      const isCustom = !backgrounds.includes(cfg.background)
+      setBackground(isCustom ? 'custom' : cfg.background)
+      if (isCustom) setCustomBackground(cfg.background)
+    }
+    if (cfg.fitType) {
+      const isCustom = !fitTypes.includes(cfg.fitType)
+      setFitType(isCustom ? 'custom' : cfg.fitType)
+      if (isCustom) setCustomFitType(cfg.fitType)
+    }
+    if (cfg.mode) {
+      setMode(cfg.mode)
+    }
+    if (cfg.breastSize && cfg.mode === 'nsfw') {
+      const isSimple = breastSizesSimple.includes(cfg.breastSize)
+      setBreastSizeMode(isSimple ? 'simple' : 'advanced')
+      if (isSimple) {
+        setBreastSizeSimple(cfg.breastSize)
+      } else {
+        setBreastSizeAdvanced(cfg.breastSize)
+      }
+    }
+    if (cfg.bootySize && cfg.mode === 'nsfw') {
+      const isCustom = !bootySizes.includes(cfg.bootySize)
+      setBootySize(isCustom ? 'custom' : cfg.bootySize)
+      if (isCustom) setCustomBootySize(cfg.bootySize)
+    }
+    if (cfg.pussyType && cfg.mode === 'nsfw') {
+      const isCustom = !pussyTypes.includes(cfg.pussyType)
+      setPussyType(isCustom ? 'custom' : cfg.pussyType)
+      if (isCustom) setCustomPussyType(cfg.pussyType)
+    }
+    if (cfg.breastVisibility) setBreastVisibility(cfg.breastVisibility)
+    if (cfg.bootyVisibility) setBootyVisibility(cfg.bootyVisibility)
+    if (cfg.pussyVisibility) setPussyVisibility(cfg.pussyVisibility)
+    
+    showToast(`Loaded: ${preset.name}`)
+  }
+
+  // ── NEW: Apply Template ──
+  const applyTemplate = (templateId: string) => {
+    const template = DYNAMIC_TEMPLATES.find(t => t.id === templateId)
+    if (!template) return
+    
+    if (template.settings.nbpPromptStyle) setNbpPromptStyle(template.settings.nbpPromptStyle)
+    if (template.settings.nbpAesthetic) setNbpAesthetic(template.settings.nbpAesthetic)
+    if (template.settings.nbpCameraDevice) setNbpCameraDevice(template.settings.nbpCameraDevice)
+    if (template.settings.nbpDetailLevel) setNbpDetailLevel(template.settings.nbpDetailLevel)
+    if (template.settings.nbpIncludeNegative !== undefined) setNbpIncludeNegative(template.settings.nbpIncludeNegative)
+    
+    setSelectedTemplate(templateId)
+    showToast(`Template applied: ${template.name}`)
+  }
+
+  // ── NEW: Handle Image Upload ──
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    setIsAnalyzingImage(true)
+    
+    const reader = new FileReader()
+    reader.onload = async (event) => {
+      const base64Image = event.target?.result as string
+      setAnalyzedImage(base64Image)
+      setCachedImageDescription('') // Clear cache for new image
+      
+      try {
+        // Call the backend API to analyze the image
+        const res = await fetch('/api/analyze-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageBase64: base64Image,
+            mode: 'auto',
+            outputFormat: nbpOutputFormat // Respect user's selected output format
+          })
+        })
+        
+        if (!res.ok) {
+          throw new Error('Failed to analyze image')
+        }
+        
+        const data = await res.json()
+        
+        // Update the mode based on detection (sfw or nsfw)
+        if (data.meta?.mode) {
+          const detectedMode = data.meta.mode as 'sfw' | 'nsfw'
+          setMode(detectedMode)
+          if (detectedMode === 'nsfw' && !nsfwConfirmed) {
+            setNsfwConfirmed(true)
+          }
+        }
+        
+        // Update the prompt output
+        if (data.prompt) {
+          setCurrentPrompt(data.prompt)
+        }
+        
+        // Cache the description for format switching
+        if (data.meta?.description) {
+          console.log('Caching description:', data.meta.description.substring(0, 100))
+          setCachedImageDescription(data.meta.description)
+        } else {
+          console.log('No description in response')
+        }
+        
+        showToast(`Analyzed!`)
+      } catch (error) {
+        console.error('Image analysis error:', error)
+        showToast('Failed to analyze image')
+      } finally {
+        setIsAnalyzingImage(false)
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // ── NEW: Handle Drag and Drop Events ──
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+  }
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+
+    const files = e.dataTransfer.files
+    if (files.length === 0) return
+
+    const file = files[0]
+    if (!file.type.startsWith('image/')) {
+      showToast('Please drop an image file')
+      return
+    }
+
+    setIsAnalyzingImage(true)
+
+    const reader = new FileReader()
+    reader.onload = async (event) => {
+      const base64Image = event.target?.result as string
+      setAnalyzedImage(base64Image)
+      setCachedImageDescription('') // Clear cache for new image
+
+      try {
+        // Call the backend API to analyze the image
+        const res = await fetch('/api/analyze-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageBase64: base64Image,
+            mode: 'auto',
+            outputFormat: nbpOutputFormat
+          })
+        })
+
+        if (!res.ok) {
+          throw new Error('Failed to analyze image')
+        }
+
+        const data = await res.json()
+
+        // Update the mode based on detection
+        if (data.meta?.mode) {
+          const detectedMode = data.meta.mode as 'sfw' | 'nsfw'
+          setMode(detectedMode)
+          if (detectedMode === 'nsfw' && !nsfwConfirmed) {
+            setNsfwConfirmed(true)
+          }
+        }
+
+        // Update the prompt output
+        if (data.prompt) {
+          setCurrentPrompt(data.prompt)
+        }
+
+        
+        showToast(`Image analyzed! Detected: ${data.meta?.mode?.toUpperCase() || "UNKNOWN"}`)
+
+        setCustomInstructionsActive(true)
+        showToast(`Image analyzed! Mode: ${data.meta?.mode?.toUpperCase() || 'AUTO'}`)
+      } catch (error) {
+        console.error('Image analysis error:', error)
+        showToast('Failed to analyze image')
+      } finally {
+        setIsAnalyzingImage(false)
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // ── NEW: Reset Custom Instructions ──
+  const resetCustomInstructions = () => {
+    setCustomInstructions('')
+    setCustomInstructionsActive(false)
+    setAnalyzedImage(null)
+    setCachedImageDescription('')
+  }
+
   const getValue = (value: string, customValue: string) => {
     return value === 'custom' ? customValue : value
   }
@@ -302,6 +1023,71 @@ function App() {
       return breastSizeAdvanced || '32C'
     }
     return getValue(breastSizeSimple, 'large')
+  }
+
+  // ── NEW: Apply Built-in Preset ──
+  const applyPreset = (preset: PresetConfig) => {
+    setMode(preset.mode)
+    
+    const isCustomEthnicity = !ethnicities.includes(preset.ethnicity)
+    setEthnicity(isCustomEthnicity ? 'custom' : preset.ethnicity)
+    if (isCustomEthnicity) setCustomEthnicity(preset.ethnicity)
+    
+    const isCustomSkin = !skinTones.includes(preset.skinTone)
+    setSkinTone(isCustomSkin ? 'custom' : preset.skinTone)
+    if (isCustomSkin) setCustomSkinTone(preset.skinTone)
+    
+    const isCustomAge = !ages.includes(preset.age)
+    setAge(isCustomAge ? 'custom' : preset.age)
+    if (isCustomAge) setCustomAge(preset.age)
+    
+    const isCustomHeight = !heights.includes(preset.height)
+    setHeight(isCustomHeight ? 'custom' : preset.height)
+    if (isCustomHeight) setCustomHeight(preset.height)
+    
+    const isCustomEye = !eyeColors.includes(preset.eyeColor)
+    setEyeColor(isCustomEye ? 'custom' : preset.eyeColor)
+    if (isCustomEye) setCustomEyeColor(preset.eyeColor)
+    
+    const isCustomHair = !hairColors.includes(preset.hairColor)
+    setHairColor(isCustomHair ? 'custom' : preset.hairColor)
+    if (isCustomHair) setCustomHairColor(preset.hairColor)
+    
+    const isCustomBody = !bodyTypes.includes(preset.bodyType)
+    setBodyType(isCustomBody ? 'custom' : preset.bodyType)
+    if (isCustomBody) setCustomBodyType(preset.bodyType)
+    
+    const isCustomBg = !backgrounds.includes(preset.background)
+    setBackground(isCustomBg ? 'custom' : preset.background)
+    if (isCustomBg) setCustomBackground(preset.background)
+    
+    const isCustomFit = !fitTypes.includes(preset.fitType)
+    setFitType(isCustomFit ? 'custom' : preset.fitType)
+    if (isCustomFit) setCustomFitType(preset.fitType)
+    
+    if (preset.mode === 'nsfw') {
+      if (preset.breastSize) {
+        const isSimple = breastSizesSimple.includes(preset.breastSize)
+        setBreastSizeMode(isSimple ? 'simple' : 'advanced')
+        if (isSimple) setBreastSizeSimple(preset.breastSize)
+        else setBreastSizeAdvanced(preset.breastSize)
+      }
+      if (preset.bootySize) {
+        const isCustom = !bootySizes.includes(preset.bootySize)
+        setBootySize(isCustom ? 'custom' : preset.bootySize)
+        if (isCustom) setCustomBootySize(preset.bootySize)
+      }
+      if (preset.pussyType) {
+        const isCustom = !pussyTypes.includes(preset.pussyType)
+        setPussyType(isCustom ? 'custom' : preset.pussyType)
+        if (isCustom) setCustomPussyType(preset.pussyType)
+      }
+      if (preset.breastVisibility) setBreastVisibility(preset.breastVisibility)
+      if (preset.bootyVisibility) setBootyVisibility(preset.bootyVisibility)
+      if (preset.pussyVisibility) setPussyVisibility(preset.pussyVisibility)
+    }
+    
+    showToast(`Preset loaded: ${preset.name}`)
   }
 
   const renderVisibilityControl = (label: string, value: string, onChange: (v: string) => void) => (
@@ -341,15 +1127,15 @@ function App() {
     </div>
   )
 
-  const generatePrompt = async (similar: boolean = false) => {
+  const generatePrompt = async (similar: boolean = false, highConsistency: boolean = false) => {
     setLoading(true)
     try {
       const resolvedNbpCameraDevice = nbpCameraDevice === 'custom'
-        ? (customNbpCameraDevice.trim() || 'Generic Smartphone')
+        ? (nbpCameraDeviceCustom.trim() || 'Generic Smartphone')
         : nbpCameraDevice
 
       const resolvedNbpAesthetic = nbpAesthetic === 'custom'
-        ? (customNbpAesthetic.trim() || 'casual_instagram')
+        ? (nbpAestheticCustom.trim() || 'casual_instagram')
         : nbpAesthetic
 
       const params: Record<string, any> = {
@@ -364,7 +1150,10 @@ function App() {
         background: getValue(background, customBackground),
         fitType: getValue(fitType, customFitType),
         mode,
-        previousPrompt: similar ? currentPrompt : undefined
+        previousPrompt: (similar || highConsistency) ? currentPrompt : undefined,
+        highConsistency,
+        customInstructions: customInstructionsActive ? customInstructions : undefined,
+        variationSeed: highConsistency ? Date.now() + Math.random() : undefined
       }
 
       if (mode === 'nsfw') {
@@ -408,6 +1197,11 @@ function App() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // ── NEW: Generate with 95% Same (High Consistency) ──
+  const generate95PercentSame = async () => {
+    await generatePrompt(false, true)
   }
 
   const savePrompt = async () => {
@@ -526,6 +1320,9 @@ function App() {
     return true
   })
 
+  const sfwPresets = BUILT_IN_PRESETS.filter(p => p.mode === 'sfw')
+  const nsfwPresets = BUILT_IN_PRESETS.filter(p => p.mode === 'nsfw')
+
   const renderSelect = (label: string, value: string, onChange: (v: string) => void, options: string[], customValue: string, onCustomChange: (v: string) => void, placeholder: string) => (
     <div style={{ marginBottom: '12px' }}>
       <label style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#888', marginBottom: '4px', display: 'block' }}>{label}</label>
@@ -578,15 +1375,35 @@ function App() {
     return { background: 'rgba(255, 107, 107, 0.2)', color: '#ff6b6b', border: '1px solid rgba(255, 107, 107, 0.4)' }
   }
 
+  // ── NEW: Get Preset Icon ──
+  const getPresetIcon = (presetName: string) => {
+    const iconMap: Record<string, React.ReactNode> = {
+      'Gym Girl': <Activity size={14} />,
+      'Beach Babe': <SunMedium size={14} />,
+      'Y2K Aesthetic': <Sparkle size={14} />,
+      'Influencer': <Camera size={14} />,
+      'Casual Home': <Home size={14} />,
+      'Cocktail Party': <Wine size={14} />,
+      'Bedroom Mirror': <Eye size={14} />,
+      'Late Night': <Moon size={14} />,
+      'Fresh Out': <Droplets size={14} />,
+      'Boudoir': <Heart size={14} />,
+      'Bath Time': <Bath size={14} />,
+      'Poolside Glam': <Umbrella size={14} />
+    }
+    return iconMap[presetName] || <Star size={14} />
+  }
+
   return (
-    <div className="container" style={{ maxWidth: '1400px', margin: '0 auto', padding: '20px', background: '#0a0a0a', minHeight: '100vh', color: '#fff' }}>
+    <div className="container" style={{ maxWidth: '1600px', margin: '0 auto', padding: '20px', background: '#0a0a0a', minHeight: '100vh', color: '#fff' }}>
       <style>{`
         .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
         .config-section { background: #111; padding: 16px; border-radius: 12px; border: 1px solid #222; margin-bottom: 12px; }
         .full-width { grid-column: 1 / -1; }
-        @media (max-width: 1200px) { .config-grid { grid-template-columns: 1fr; } }
-        .main-layout { display: grid; grid-template-columns: 320px 1fr 360px; gap: 20px; }
-        @media (max-width: 1200px) { .main-layout { grid-template-columns: 280px 1fr; } .history-panel { display: none; } }
+        @media (max-width: 1400px) { .config-grid { grid-template-columns: 1fr; } }
+        .main-layout { display: grid; grid-template-columns: 280px 260px 1fr 360px; gap: 16px; }
+        @media (max-width: 1400px) { .main-layout { grid-template-columns: 260px 240px 1fr; } .history-panel { display: none; } }
+        @media (max-width: 1100px) { .main-layout { grid-template-columns: 240px 1fr; } .presets-panel { display: none; } }
         @media (max-width: 768px) { .main-layout { grid-template-columns: 1fr; } }
         .output-box { background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 16px; min-height: 200px; max-height: 600px; overflow-y: auto; line-height: 1.6; font-size: 0.9rem; white-space: pre-wrap; }
         .btn { background: #ff3366; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; transition: opacity 0.2s; }
@@ -596,6 +1413,12 @@ function App() {
         .btn-success { background: #22c55e; }
         .btn-nbp3 { background: #a855f7; }
         .btn-nbp3:hover:not(:disabled) { background: #9333ea; }
+        .btn-purple { background: #8b5cf6; }
+        .btn-purple:hover:not(:disabled) { background: #7c3aed; }
+        .btn-pink { background: #ec4899; }
+        .btn-pink:hover:not(:disabled) { background: #db2777; }
+        .btn-orange { background: #f97316; }
+        .btn-orange:hover:not(:disabled) { background: #ea580c; }
         .tabs { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
         .tab { padding: 6px 12px; border-radius: 4px; border: none; background: #222; color: #888; cursor: pointer; font-size: 0.8rem; }
         .tab.active { background: #ff3366; color: white; }
@@ -630,11 +1453,222 @@ function App() {
         .engine-btn.nbpgen { background: transparent; color: #888; }
         .engine-btn.nbpgen.active { background: linear-gradient(135deg, #c8ff00, #8ab800); color: #000; box-shadow: 0 2px 12px rgba(200, 255, 0, 0.4); }
         .nbp3-section { background: rgba(168, 85, 247, 0.05); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
-        .nbp3-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; color: #a855f7; margin-bottom: 4px; display: block; font-weight: 600; }
+        .nbp3-label { font-size: 0.7rem; text-transform: uppercase; letterSpacing: 0.5px; color: #a855f7; margin-bottom: 4px; display: block; font-weight: 600; }
         .nbp3-select { width: 100%; padding: 6px 8px; borderRadius: 6px; border: 1px solid rgba(168,85,247,0.3); background: #1a1a1a; color: #fff; font-size: 0.85rem; }
         .nbp3-toggle-row { display: flex; gap: 4px; margin-bottom: 8px; }
         .nbp3-toggle-btn { flex: 1; padding: 6px; border-radius: 6px; border: 1px solid #333; background: #1a1a1a; color: #888; cursor: pointer; font-size: 0.75rem; font-weight: 600; text-align: center; transition: all 0.2s; }
         .nbp3-toggle-btn.active { border-color: #a855f7; background: rgba(168,85,247,0.2); color: #a855f7; }
+        
+        /* NEW: Preset Button Styles - Compact 2-Column Grid */
+        .preset-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 4px;
+          margin-bottom: 8px;
+        }
+        .preset-btn { 
+          width: 100%; 
+          padding: 4px 6px; 
+          margin-bottom: 0;
+          border: 1px solid #333; 
+          background: #1a1a1a; 
+          color: #aaa; 
+          border-radius: 4px; 
+          cursor: pointer; 
+          font-size: 0.7rem; 
+          display: flex; 
+          align-items: center; 
+          gap: 4px; 
+          transition: all 0.2s;
+          text-align: left;
+          line-height: 1.2;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .preset-btn:hover { 
+          border-color: #ff3366; 
+          background: rgba(255, 51, 102, 0.1); 
+          color: #fff; 
+        }
+        .preset-btn svg {
+          flex-shrink: 0;
+          width: 12px;
+          height: 12px;
+        }
+        .preset-section-title {
+          font-size: 0.65rem;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          color: #666;
+          margin: 12px 0 8px 0;
+          padding-bottom: 4px;
+          border-bottom: 1px solid #222;
+        }
+        .preset-section-title:first-child {
+          margin-top: 0;
+        }
+        
+        /* NEW: Toggle Switch */
+        .toggle-switch {
+          position: relative;
+          display: inline-block;
+          width: 44px;
+          height: 24px;
+        }
+        .toggle-switch input {
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+        .toggle-slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: #333;
+          transition: .3s;
+          border-radius: 24px;
+        }
+        .toggle-slider:before {
+          position: absolute;
+          content: "";
+          height: 18px;
+          width: 18px;
+          left: 3px;
+          bottom: 3px;
+          background-color: white;
+          transition: .3s;
+          border-radius: 50%;
+        }
+        input:checked + .toggle-slider {
+          background-color: #ff3366;
+        }
+        input:checked + .toggle-slider:before {
+          transform: translateX(20px);
+        }
+        
+        /* NEW: Custom Instructions Textarea */
+        .custom-instructions-textarea {
+          width: 100%;
+          min-height: 80px;
+          padding: 10px;
+          border-radius: 8px;
+          border: 1px solid #333;
+          background: #1a1a1a;
+          color: #fff;
+          font-size: 0.8rem;
+          resize: vertical;
+          font-family: inherit;
+          transition: border-color 0.2s;
+        }
+        .custom-instructions-textarea:focus {
+          outline: none;
+          border-color: #ff3366;
+        }
+        .custom-instructions-textarea.active {
+          border-color: #22c55e;
+          background: rgba(34, 197, 94, 0.05);
+        }
+        
+        /* NEW: Section Header with Collapse */
+        .section-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          cursor: pointer;
+          padding: 4px 0;
+        }
+        .section-header:hover {
+          opacity: 0.8;
+        }
+        .collapse-icon {
+          transition: transform 0.2s;
+        }
+        .collapse-icon.collapsed {
+          transform: rotate(-90deg);
+        }
+        
+        /* NEW: Template Dropdown */
+        .template-select {
+          width: 100%;
+          padding: 8px 10px;
+          border-radius: 6px;
+          border: 1px solid #444;
+          background: #1a1a1a;
+          color: #fff;
+          font-size: 0.85rem;
+          cursor: pointer;
+        }
+        .template-select:focus {
+          outline: none;
+          border-color: #a855f7;
+        }
+        
+        /* NEW: Status Indicator */
+        .status-indicator {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 0.75rem;
+          padding: 6px 10px;
+          border-radius: 6px;
+          background: #1a1a1a;
+          border: 1px solid #333;
+        }
+        .status-indicator.ok {
+          border-color: #22c55e;
+          color: #22c55e;
+          background: rgba(34, 197, 94, 0.1);
+        }
+        .status-indicator.error {
+          border-color: #ef4444;
+          color: #ef4444;
+          background: rgba(239, 68, 68, 0.1);
+        }
+        
+        /* NEW: Generate Panel Layout */
+        .generate-btn-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+        }
+        .generate-btn-grid .btn-full {
+          grid-column: 1 / -1;
+        }
+        
+        /* NEW: Image Upload Area */
+        .image-upload-area {
+          border: 2px dashed #444;
+          border-radius: 8px;
+          padding: 16px;
+          text-align: center;
+          cursor: pointer;
+          transition: all 0.2s;
+          margin-bottom: 12px;
+        }
+        .image-upload-area:hover {
+          border-color: #8b5cf6;
+          background: rgba(139, 92, 246, 0.05);
+        }
+        .image-upload-area.drag-over {
+          border-color: #8b5cf6;
+          background: rgba(139, 92, 246, 0.15);
+          border-style: solid;
+        }
+        .image-upload-area.has-image {
+          border-color: #22c55e;
+          border-style: solid;
+        }
+        .uploaded-image-preview {
+          width: 100%;
+          max-height: 120px;
+          object-fit: cover;
+          border-radius: 6px;
+          margin-bottom: 8px;
+        }
       `}</style>
 
       {toast.visible && (
@@ -669,7 +1703,7 @@ function App() {
           </p>
         
         {/* ── Engine Toggle ── */}
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
           <div className="engine-toggle" style={{ maxWidth: '940px', width: '100%' }}>
             <button 
               className={`engine-btn zimage ${engine === 'zimage' ? 'active' : ''}`}
@@ -713,288 +1747,701 @@ function App() {
       {engine !== 'watermark' && engine !== 'armscaler' && (
       <div className="main-layout">
         
-        {/* ═══ LEFT: CONFIG PANEL ═══ */}
+        {/* ═══ LEFT: GENERATE PANEL ═══ */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* Image Analysis Section */}
           <div className="config-section">
-            <h2 style={{ fontSize: '1rem', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Sparkles size={18} /> Configuration
+            <div className="section-header" onClick={() => {}}>
+              <h2 style={{ fontSize: '0.9rem', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <ImagePlus size={16} color="#8b5cf6" /> Image Analysis
+              </h2>
+            </div>
+            
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImageUpload}
+              accept="image/*"
+              style={{ display: 'none' }}
+            />
+            
+            {!analyzedImage ? (
+              <div 
+                className={`image-upload-area ${isDragOver ? 'drag-over' : ''}`}
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                <Upload size={24} color={isDragOver ? '#8b5cf6' : '#666'} style={{ marginBottom: '8px' }} />
+                <div style={{ fontSize: '0.8rem', color: isDragOver ? '#8b5cf6' : '#888' }}>
+                  {isAnalyzingImage ? 'Analyzing...' : isDragOver ? 'Drop image here' : 'Drag image or click to upload'}
+                </div>
+                <div style={{ fontSize: '0.7rem', color: '#666', marginTop: '4px' }}>
+                  Supports JPG, PNG, WEBP
+                </div>
+              </div>
+            ) : (
+              <div className="image-upload-area has-image">
+                <img src={analyzedImage} alt="Analyzed" className="uploaded-image-preview" />
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{
+                      fontSize: '0.7rem',
+                      padding: '4px 8px',
+                      background: '#333',
+                      border: 'none',
+                      borderRadius: '4px',
+                      color: '#fff',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    New Image
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Regenerate with current output format using current prompt (prose) as source
+                      if (analyzedImage && currentPrompt) {
+                        setIsAnalyzingImage(true)
+                        fetch('/api/analyze-image', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            imageBase64: analyzedImage,
+                            mode: 'auto',
+                            outputFormat: nbpOutputFormat,
+                            cachedDescription: currentPrompt // Use the prose prompt as source
+                          })
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                          if (data.prompt) {
+                            setCurrentPrompt(data.prompt)
+                          }
+                          setIsAnalyzingImage(false)
+                        })
+                        .catch(() => setIsAnalyzingImage(false))
+                      }
+                    }}
+                    disabled={isAnalyzingImage || !currentPrompt}
+                    style={{
+                      fontSize: '0.7rem',
+                      padding: '4px 8px',
+                      background: '#8b5cf6',
+                      border: 'none',
+                      borderRadius: '4px',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      opacity: (isAnalyzingImage || !currentPrompt) ? 0.5 : 1
+                    }}
+                  >
+                    {isAnalyzingImage ? '...' : `Regen (${nbpOutputFormat})`}
+                  </button>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '4px' }}>
+                  <CheckCircle size={12} /> Analyzed
+                </div>
+              </div>
+            )}
+            
+            <button 
+              className="btn btn-purple"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isAnalyzingImage}
+              style={{ width: '100%', justifyContent: 'center' }}
+            >
+              {isAnalyzingImage ? <><div className="spinner" /> Analyzing...</> : <><ImagePlus size={16} /> Drag Image</>}
+            </button>
+          </div>
+
+          {/* Generate Buttons Section */}
+          <div className="config-section">
+            <h2 style={{ fontSize: '0.9rem', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Wand2 size={16} color="#ff3366" /> Generate
             </h2>
             
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: ollamaStatus === 'connected' ? '#22c55e' : '#ef4444', marginBottom: '12px' }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: ollamaStatus === 'connected' ? '#22c55e' : '#ef4444' }} />
-              {ollamaStatus === 'checking' ? 'Checking Ollama...' : ollamaStatus === 'connected' ? 'Ollama Connected' : 'Ollama Disconnected'}
+            <div className="generate-btn-grid">
+              <button 
+                className={`btn btn-pink btn-full`}
+                onClick={() => generatePrompt(false)}
+                disabled={isGenerateDisabled()}
+              >
+                {loading ? <><div className="spinner" /> Working...</> : <><Sparkles size={16} /> Generate New</>}
+              </button>
+              
+              <button 
+                className="btn btn-secondary"
+                onClick={() => generatePrompt(true)}
+                disabled={isGenerateDisabled() || !currentPrompt}
+              >
+                <RefreshCw size={14} /> Similar
+              </button>
+              
+              <button 
+                className="btn btn-orange"
+                onClick={generate95PercentSame}
+                disabled={isGenerateDisabled() || !currentPrompt}
+              >
+                <Percent size={14} /> 95% Same
+              </button>
             </div>
+          </div>
 
-            {/* ── NBP3 Options (shown only when NBP3 engine selected) ── */}
-            {engine === 'nbp3' && (
-              <div className="nbp3-section">
-                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', color: '#a855f7', marginBottom: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Cpu size={14} /> NBP3 Settings
-                </div>
-
-                {/* Output Format Toggle */}
-                <div style={{ marginBottom: '10px' }}>
-                  <label className="nbp3-label"><FileText size={10} style={{ display: 'inline' }} /> Output Format</label>
-                  <div className="nbp3-toggle-row">
-                    <button className={`nbp3-toggle-btn ${nbpOutputFormat === 'prose' ? 'active' : ''}`} onClick={() => setNbpOutputFormat('prose')}>
-                      <FileText size={12} style={{ display: 'inline', marginRight: '4px' }} />Prose
-                    </button>
-                    <button className={`nbp3-toggle-btn ${nbpOutputFormat === 'json' ? 'active' : ''}`} onClick={() => setNbpOutputFormat('json')}>
-                      <FileJson size={12} style={{ display: 'inline', marginRight: '4px' }} />JSON
-                    </button>
+          {/* Custom Instructions Section */}
+          <div className="config-section">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <h2 style={{ fontSize: '0.9rem', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <MessageSquare size={16} color="#3b82f6" /> Custom
+              </h2>
+              <label className="toggle-switch">
+                <input 
+                  type="checkbox" 
+                  checked={customInstructionsEnabled}
+                  onChange={(e) => {
+                    setCustomInstructionsEnabled(e.target.checked)
+                    if (!e.target.checked) setCustomInstructionsActive(false)
+                  }}
+                />
+                <span className="toggle-slider"></span>
+              </label>
+            </div>
+            
+            {customInstructionsEnabled && (
+              <>
+                <textarea
+                  className={`custom-instructions-textarea ${customInstructionsActive ? 'active' : ''}`}
+                  placeholder="Add custom instructions to guide the AI..."
+                  value={customInstructions}
+                  onChange={(e) => {
+                    setCustomInstructions(e.target.value)
+                    setCustomInstructionsActive(e.target.value.trim().length > 0)
+                  }}
+                />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+                  <div style={{ 
+                    fontSize: '0.7rem', 
+                    padding: '3px 8px', 
+                    borderRadius: '4px',
+                    background: customInstructionsActive ? 'rgba(34, 197, 94, 0.2)' : '#1a1a1a',
+                    color: customInstructionsActive ? '#22c55e' : '#666',
+                    border: `1px solid ${customInstructionsActive ? '#22c55e' : '#333'}`
+                  }}>
+                    {customInstructionsActive ? 'ACTIVE' : 'INACTIVE'}
                   </div>
-                </div>
-
-                {/* Prompt Style */}
-                <div style={{ marginBottom: '10px' }}>
-                  <label className="nbp3-label"><Camera size={10} style={{ display: 'inline' }} /> Prompt Style</label>
-                  <select value={nbpPromptStyle} onChange={(e) => setNbpPromptStyle(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid rgba(168,85,247,0.3)', background: '#1a1a1a', color: '#fff', fontSize: '0.85rem' }}>
-                    {nbpPromptStyles.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                  </select>
-                </div>
-
-                {/* Camera Device */}
-                <div style={{ marginBottom: '10px' }}>
-                  <label className="nbp3-label"><Camera size={10} style={{ display: 'inline' }} /> Camera Device</label>
-                  <select value={nbpCameraDevice} onChange={(e) => setNbpCameraDevice(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid rgba(168,85,247,0.3)', background: '#1a1a1a', color: '#fff', fontSize: '0.85rem' }}>
-                    {nbpCameraDevices.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                  </select>
-                {nbpCameraDevice === 'custom' && (
-                  <input
-                    value={nbpCameraDeviceCustom}
-                    onChange={(e) => setNbpCameraDeviceCustom(e.target.value)}
-                    placeholder="Type your camera device..."
-                    style={{
-                      width: '100%',
-                      marginTop: '8px',
-                      padding: '10px 12px',
-                      borderRadius: '10px',
-                      border: '1px solid rgba(255,255,255,0.12)',
-                      background: 'rgba(0,0,0,0.35)',
-                      color: '#fff',
-                      outline: 'none'
+                  <button 
+                    onClick={resetCustomInstructions}
+                    style={{ 
+                      background: 'none', 
+                      border: 'none', 
+                      color: '#888', 
+                      fontSize: '0.75rem', 
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
                     }}
-                  />
-                )}
+                  >
+                    <RotateCcw size={12} /> Reset
+                  </button>
                 </div>
+              </>
+            )}
+          </div>
 
-                {/* Aesthetic */}
-                <div style={{ marginBottom: '10px' }}>
-                  <label className="nbp3-label"><SunMedium size={10} style={{ display: 'inline' }} /> Aesthetic</label>
-                  <select value={nbpAesthetic} onChange={(e) => setNbpAesthetic(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid rgba(168,85,247,0.3)', background: '#1a1a1a', color: '#fff', fontSize: '0.85rem' }}>
-                    {nbpAesthetics.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                  </select>
-                {nbpAesthetic === 'custom' && (
-                  <input
-                    value={nbpAestheticCustom}
-                    onChange={(e) => setNbpAestheticCustom(e.target.value)}
-                    placeholder="Type your aesthetic..."
-                    style={{
-                      width: '100%',
-                      marginTop: '8px',
-                      padding: '10px 12px',
-                      borderRadius: '10px',
-                      border: '1px solid rgba(255,255,255,0.12)',
-                      background: 'rgba(0,0,0,0.35)',
-                      color: '#fff',
-                      outline: 'none'
-                    }}
-                  />
-                )}
+          {/* Ollama Status */}
+          <div className="status-indicator" style={{ 
+            borderColor: ollamaStatus === 'connected' ? '#22c55e' : '#ef4444',
+            color: ollamaStatus === 'connected' ? '#22c55e' : '#ef4444',
+            background: ollamaStatus === 'connected' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)'
+          }}>
+            <div style={{ 
+              width: 8, 
+              height: 8, 
+              borderRadius: '50%', 
+              background: ollamaStatus === 'connected' ? '#22c55e' : '#ef4444',
+              animation: ollamaStatus === 'checking' ? 'pulse 1.5s infinite' : 'none'
+            }} />
+            <span style={{ fontWeight: 600 }}>
+              Ollama {ollamaStatus === 'connected' ? 'OK' : ollamaStatus === 'checking' ? 'Checking...' : 'Disconnected'}
+            </span>
+          </div>
+        </div>
+
+        {/* ═══ MIDDLE-LEFT: PRESETS PANEL ═══ */}
+        <div className="presets-panel" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="config-section">
+            <div className="section-header" onClick={() => setPresetsCollapsed(!presetsCollapsed)}>
+              <h2 style={{ fontSize: '0.9rem', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Gem size={16} color="#f59e0b" /> Presets
+              </h2>
+              <ChevronDown size={16} className={`collapse-icon ${presetsCollapsed ? 'collapsed' : ''}`} />
+            </div>
+            
+            {!presetsCollapsed && (
+              <>
+                {/* SFW Section */}
+                <div className="preset-section-title">
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Eye size={10} /> SFW
+                  </span>
                 </div>
-
-                {/* Aspect Ratio */}
-                <div style={{ marginBottom: '10px' }}>
-                  <label className="nbp3-label"><Ratio size={10} style={{ display: 'inline' }} /> Aspect Ratio</label>
-                  <select value={nbpAspectRatio} onChange={(e) => setNbpAspectRatio(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid rgba(168,85,247,0.3)', background: '#1a1a1a', color: '#fff', fontSize: '0.85rem' }}>
-                    {nbpAspectRatios.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                  </select>
+                <div className="preset-grid">
+                  {sfwPresets.map(preset => (
+                    <button 
+                      key={preset.id} 
+                      className="preset-btn"
+                      onClick={() => applyPreset(preset)}
+                      title={preset.name}
+                    >
+                      {getPresetIcon(preset.name)}
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{preset.name}</span>
+                    </button>
+                  ))}
                 </div>
+                
+                {/* NSFW Section */}
+                <div className="preset-section-title">
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <EyeOff size={10} /> NSFW
+                  </span>
+                </div>
+                <div className="preset-grid">
+                  {nsfwPresets.map(preset => (
+                    <button 
+                      key={preset.id} 
+                      className="preset-btn"
+                      onClick={() => applyPreset(preset)}
+                      style={{ borderColor: '#331a1a' }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = '#ff3366'
+                        e.currentTarget.style.background = 'rgba(255, 51, 102, 0.1)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = '#331a1a'
+                        e.currentTarget.style.background = '#1a1a1a'
+                      }}
+                      title={preset.name}
+                    >
+                      {getPresetIcon(preset.name)}
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{preset.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
 
-                {/* Detail Level */}
-                <div style={{ marginBottom: '10px' }}>
-                  <label className="nbp3-label"><Layers size={10} style={{ display: 'inline' }} /> Detail Level</label>
-                  <div className="nbp3-toggle-row">
-                    {nbpDetailLevels.map(d => (
-                      <button key={d.value} className={`nbp3-toggle-btn ${nbpDetailLevel === d.value ? 'active' : ''}`} onClick={() => setNbpDetailLevel(d.value)}>
-                        {d.label}
-                      </button>
+        {/* ═══ CENTER: CONFIGURATION PANEL ═══ */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* My Presets Section */}
+          <div className="config-section">
+            <div className="section-header" onClick={() => setMyPresetsCollapsed(!myPresetsCollapsed)}>
+              <h2 style={{ fontSize: '0.9rem', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Star size={16} color="#f59e0b" /> My Presets
+              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button 
+                  className="icon-btn"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowNewPresetModal(true)
+                  }}
+                  title="Create new preset"
+                >
+                  <Plus size={16} />
+                </button>
+                <ChevronDown size={16} className={`collapse-icon ${myPresetsCollapsed ? 'collapsed' : ''}`} />
+              </div>
+            </div>
+            
+            {!myPresetsCollapsed && (
+              <>
+                {myPresets.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '16px', color: '#666', fontSize: '0.8rem' }}>
+                    No custom presets yet.<br />
+                    Click + to save current settings
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {myPresets.map(preset => (
+                      <div 
+                        key={preset.id}
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '4px',
+                          padding: '4px 8px',
+                          background: '#1a1a1a',
+                          border: '1px solid #333',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem'
+                        }}
+                      >
+                        <span 
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => loadCustomPreset(preset)}
+                        >
+                          {preset.name}
+                        </span>
+                        <button 
+                          className="icon-btn"
+                          onClick={(e) => deleteCustomPreset(preset.id, e)}
+                          style={{ padding: '2px' }}
+                        >
+                          <X size={10} />
+                        </button>
+                      </div>
                     ))}
                   </div>
-                </div>
+                )}
+              </>
+            )}
+          </div>
 
-                {/* Include Negative Prompts */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: '#a855f7' }}>
-                  <input type="checkbox" checked={nbpIncludeNegative} onChange={(e) => setNbpIncludeNegative(e.target.checked)} style={{ accentColor: '#a855f7' }} />
-                  <span>Include Negative Prompts</span>
-                </div>
+          {/* Dynamic Templates Section */}
+          <div className="config-section">
+            <h2 style={{ fontSize: '0.9rem', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Sliders size={16} color="#a855f7" /> Dynamic Templates
+            </h2>
+            <select 
+              className="template-select"
+              value={selectedTemplate}
+              onChange={(e) => applyTemplate(e.target.value)}
+            >
+              <option value="">Select a template...</option>
+              {DYNAMIC_TEMPLATES.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+            {selectedTemplate && (
+              <div style={{ marginTop: '8px', fontSize: '0.75rem', color: '#888', fontStyle: 'italic' }}>
+                {DYNAMIC_TEMPLATES.find(t => t.id === selectedTemplate)?.description}
               </div>
             )}
+          </div>
 
-            {/* ── Shared Config Grid ── */}
-            <div className="config-grid">
-              {renderSelect('Ethnicity', ethnicity, setEthnicity, ethnicities, customEthnicity, setCustomEthnicity, 'Enter custom')}
-              {renderSelect('Skin Tone', skinTone, setSkinTone, skinTones, customSkinTone, setCustomSkinTone, 'Enter custom')}
-              {renderSelect('Age', age, setAge, ages, customAge, setCustomAge, 'Enter custom')}
-              {renderSelect('Height', height, setHeight, heights, customHeight, setCustomHeight, 'Enter custom')}
-              {renderSelect('Eye Color', eyeColor, setEyeColor, eyeColors, customEyeColor, setCustomEyeColor, 'Enter custom')}
-              {renderSelect('Hair Color', hairColor, setHairColor, hairColors, customHairColor, setCustomHairColor, 'Enter custom')}
-              {renderSelect('Body Type', bodyType, setBodyType, bodyTypes, customBodyType, setCustomBodyType, 'Enter custom')}
-              {renderSelect('Background', background, setBackground, backgrounds, customBackground, setCustomBackground, 'Enter custom')}
-              <div className="full-width">
-                {renderSelect('Fit/Clothing', fitType, setFitType, fitTypes, customFitType, setCustomFitType, 'Describe outfit')}
-              </div>
+          {/* Main Configuration */}
+          <div className="config-section">
+            <div className="section-header" onClick={() => setConfigCollapsed(!configCollapsed)}>
+              <h2 style={{ fontSize: '0.9rem', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Settings2 size={16} color="#3b82f6" /> Configuration
+              </h2>
+              <ChevronDown size={16} className={`collapse-icon ${configCollapsed ? 'collapsed' : ''}`} />
+            </div>
+            
+            {!configCollapsed && (
+              <>
+                {/* ── NBP3 Options (shown only when NBP3 engine selected) ── */}
+                {engine === 'nbp3' && (
+                  <div className="nbp3-section">
+                    <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', color: '#a855f7', marginBottom: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Cpu size={14} /> NBP3 Settings
+                    </div>
 
-              {mode === 'nsfw' && (
-                <div className="full-width" style={{ borderTop: '1px solid #333', paddingTop: '12px', marginTop: '4px' }}>
-                  <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', color: '#ff3366', marginBottom: '12px', fontWeight: 'bold' }}>🔞 NSFW Attributes & Visibility</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <div style={{ background: '#1a1a1a', padding: '10px', borderRadius: '8px', border: '1px solid #333' }}>
-                      <div style={{ fontSize: '0.8rem', color: '#ff3366', marginBottom: '6px', fontWeight: 'bold' }}>Breasts</div>
-                      <div style={{ marginBottom: '8px' }}>
-                        <label style={{ fontSize: '0.7rem', color: '#888' }}>Size</label>
-                        <div style={{ display: 'flex', gap: '4px' }}>
-                          <button onClick={() => setBreastSizeMode('simple')} style={{ flex: 1, padding: '4px', fontSize: '0.7rem', border: breastSizeMode === 'simple' ? '1px solid #ff3366' : '1px solid #333', background: breastSizeMode === 'simple' ? 'rgba(255,51,102,0.2)' : '#222', color: breastSizeMode === 'simple' ? '#ff3366' : '#888', borderRadius: '4px', cursor: 'pointer' }}>Simple</button>
-                          <button onClick={() => setBreastSizeMode('advanced')} style={{ flex: 1, padding: '4px', fontSize: '0.7rem', border: breastSizeMode === 'advanced' ? '1px solid #ff3366' : '1px solid #333', background: breastSizeMode === 'advanced' ? 'rgba(255,51,102,0.2)' : '#222', color: breastSizeMode === 'advanced' ? '#ff3366' : '#888', borderRadius: '4px', cursor: 'pointer' }}>Adv</button>
-                        </div>
+                    {/* Output Format Toggle */}
+                    <div style={{ marginBottom: '10px' }}>
+                      <label className="nbp3-label"><FileText size={10} style={{ display: 'inline' }} /> Output Format</label>
+                      <div className="nbp3-toggle-row">
+                        <button className={`nbp3-toggle-btn ${nbpOutputFormat === 'prose' ? 'active' : ''}`} onClick={() => setNbpOutputFormat('prose')}>
+                          <FileText size={12} style={{ display: 'inline', marginRight: '4px' }} />Prose
+                        </button>
+                        <button className={`nbp3-toggle-btn ${nbpOutputFormat === 'json' ? 'active' : ''}`} onClick={() => setNbpOutputFormat('json')}>
+                          <FileJson size={12} style={{ display: 'inline', marginRight: '4px' }} />JSON
+                        </button>
                       </div>
-                      {breastSizeMode === 'simple' ? (
-                        <select value={breastSizeSimple} onChange={(e) => setBreastSizeSimple(e.target.value)} style={{ width: '100%', marginBottom: '8px', padding: '4px', borderRadius: '4px', border: '1px solid #333', background: '#222', color: '#fff', fontSize: '0.8rem' }}>
-                          {breastSizesSimple.map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                      ) : (
-                        <input type="text" placeholder="e.g. 32DD" value={breastSizeAdvanced} onChange={(e) => setBreastSizeAdvanced(e.target.value)} style={{ width: '100%', marginBottom: '8px', padding: '4px', borderRadius: '4px', border: '1px solid #333', background: '#222', color: '#fff', fontSize: '0.8rem' }} />
-                      )}
-                      {renderVisibilityControl('Breasts', breastVisibility, setBreastVisibility)}
                     </div>
 
-                    <div style={{ background: '#1a1a1a', padding: '10px', borderRadius: '8px', border: '1px solid #333' }}>
-                      <div style={{ fontSize: '0.8rem', color: '#ff3366', marginBottom: '6px', fontWeight: 'bold' }}>Booty/Glutes</div>
-                      {renderSelect('Size', bootySize, setBootySize, bootySizes, customBootySize, setCustomBootySize, 'Custom')}
-                      {renderVisibilityControl('Booty', bootyVisibility, setBootyVisibility)}
+                    {/* Prompt Style */}
+                    <div style={{ marginBottom: '10px' }}>
+                      <label className="nbp3-label"><Camera size={10} style={{ display: 'inline' }} /> Prompt Style</label>
+                      <select value={nbpPromptStyle} onChange={(e) => setNbpPromptStyle(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid rgba(168,85,247,0.3)', background: '#1a1a1a', color: '#fff', fontSize: '0.85rem' }}>
+                        {nbpPromptStyles.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                      </select>
                     </div>
 
-                    <div className="full-width" style={{ background: '#1a1a1a', padding: '10px', borderRadius: '8px', border: '1px solid #333' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', alignItems: 'start' }}>
-                        <div>
-                          <div style={{ fontSize: '0.8rem', color: '#ff3366', marginBottom: '6px', fontWeight: 'bold' }}>Pussy/Vulva</div>
-                          {renderSelect('Type', pussyType, setPussyType, pussyTypes, customPussyType, setCustomPussyType, 'Custom')}
-                        </div>
-                        <div>
-                          {renderVisibilityControl('Pussy', pussyVisibility, setPussyVisibility)}
-                        </div>
+                    {/* Camera Device */}
+                    <div style={{ marginBottom: '10px' }}>
+                      <label className="nbp3-label"><Camera size={10} style={{ display: 'inline' }} /> Camera Device</label>
+                      <select value={nbpCameraDevice} onChange={(e) => setNbpCameraDevice(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid rgba(168,85,247,0.3)', background: '#1a1a1a', color: '#fff', fontSize: '0.85rem' }}>
+                        {nbpCameraDevices.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                      </select>
+                    {nbpCameraDevice === 'custom' && (
+                      <input
+                        value={nbpCameraDeviceCustom}
+                        onChange={(e) => setNbpCameraDeviceCustom(e.target.value)}
+                        placeholder="Type your camera device..."
+                        style={{
+                          width: '100%',
+                          marginTop: '8px',
+                          padding: '10px 12px',
+                          borderRadius: '10px',
+                          border: '1px solid rgba(255,255,255,0.12)',
+                          background: 'rgba(0,0,0,0.35)',
+                          color: '#fff',
+                          outline: 'none'
+                        }}
+                      />
+                    )}
+                    </div>
+
+                    {/* Aesthetic */}
+                    <div style={{ marginBottom: '10px' }}>
+                      <label className="nbp3-label"><SunMedium size={10} style={{ display: 'inline' }} /> Aesthetic</label>
+                      <select value={nbpAesthetic} onChange={(e) => setNbpAesthetic(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid rgba(168,85,247,0.3)', background: '#1a1a1a', color: '#fff', fontSize: '0.85rem' }}>
+                        {nbpAesthetics.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                      </select>
+                    {nbpAesthetic === 'custom' && (
+                      <input
+                        value={nbpAestheticCustom}
+                        onChange={(e) => setNbpAestheticCustom(e.target.value)}
+                        placeholder="Type your aesthetic..."
+                        style={{
+                          width: '100%',
+                          marginTop: '8px',
+                          padding: '10px 12px',
+                          borderRadius: '10px',
+                          border: '1px solid rgba(255,255,255,0.12)',
+                          background: 'rgba(0,0,0,0.35)',
+                          color: '#fff',
+                          outline: 'none'
+                        }}
+                      />
+                    )}
+                    </div>
+
+                    {/* Aspect Ratio */}
+                    <div style={{ marginBottom: '10px' }}>
+                      <label className="nbp3-label"><Ratio size={10} style={{ display: 'inline' }} /> Aspect Ratio</label>
+                      <select value={nbpAspectRatio} onChange={(e) => setNbpAspectRatio(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid rgba(168,85,247,0.3)', background: '#1a1a1a', color: '#fff', fontSize: '0.85rem' }}>
+                        {nbpAspectRatios.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                      </select>
+                    </div>
+
+                    {/* Detail Level */}
+                    <div style={{ marginBottom: '10px' }}>
+                      <label className="nbp3-label"><Layers size={10} style={{ display: 'inline' }} /> Detail Level</label>
+                      <div className="nbp3-toggle-row">
+                        {nbpDetailLevels.map(d => (
+                          <button key={d.value} className={`nbp3-toggle-btn ${nbpDetailLevel === d.value ? 'active' : ''}`} onClick={() => setNbpDetailLevel(d.value)}>
+                            {d.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Include Negative Prompts */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: '#a855f7' }}>
+                      <input type="checkbox" checked={nbpIncludeNegative} onChange={(e) => setNbpIncludeNegative(e.target.checked)} style={{ accentColor: '#a855f7' }} />
+                      <span>Include Negative Prompts</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Z-IMAGE TURBO SETTINGS Section ── */}
+                {engine === 'zimage' && (
+                  <div style={{ background: 'rgba(255, 51, 102, 0.05)', border: '1px solid rgba(255, 51, 102, 0.2)', borderRadius: '8px', padding: '12px', marginBottom: '12px' }}>
+                    <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', color: '#ff3366', marginBottom: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Zap size={14} /> Z-IMAGE TURBO SETTINGS
+                    </div>
+                    
+                    {/* OUTPUT FORMAT Toggle */}
+                    <div style={{ marginBottom: '10px' }}>
+                      <label style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#ff3366', marginBottom: '4px', display: 'block', fontWeight: 600 }}>
+                        <Type size={10} style={{ display: 'inline' }} /> OUTPUT FORMAT
+                      </label>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button 
+                          onClick={() => setNbpOutputFormat('prose')}
+                          style={{ 
+                            flex: 1, 
+                            padding: '6px', 
+                            borderRadius: '6px', 
+                            border: `1px solid ${nbpOutputFormat === 'prose' ? '#ff3366' : '#333'}`, 
+                            background: nbpOutputFormat === 'prose' ? 'rgba(255,51,102,0.2)' : '#1a1a1a', 
+                            color: nbpOutputFormat === 'prose' ? '#ff3366' : '#888', 
+                            cursor: 'pointer', 
+                            fontSize: '0.75rem', 
+                            fontWeight: 600 
+                          }}
+                        >
+                          <FileText size={12} style={{ display: 'inline', marginRight: '4px' }} />Prose
+                        </button>
+                        <button 
+                          onClick={() => setNbpOutputFormat('json')}
+                          style={{ 
+                            flex: 1, 
+                            padding: '6px', 
+                            borderRadius: '6px', 
+                            border: `1px solid ${nbpOutputFormat === 'json' ? '#ff3366' : '#333'}`, 
+                            background: nbpOutputFormat === 'json' ? 'rgba(255,51,102,0.2)' : '#1a1a1a', 
+                            color: nbpOutputFormat === 'json' ? '#ff3366' : '#888', 
+                            cursor: 'pointer', 
+                            fontSize: '0.75rem', 
+                            fontWeight: 600 
+                          }}
+                        >
+                          <FileJson size={12} style={{ display: 'inline', marginRight: '4px' }} />JSON
+                        </button>
                       </div>
                     </div>
                   </div>
+                )}
+
+                {/* ── Shared Config Grid ── */}
+                <div className="config-grid">
+                  {renderSelect('Ethnicity', ethnicity, setEthnicity, ethnicities, customEthnicity, setCustomEthnicity, 'Enter custom')}
+                  {renderSelect('Skin Tone', skinTone, setSkinTone, skinTones, customSkinTone, setCustomSkinTone, 'Enter custom')}
+                  {renderSelect('Age', age, setAge, ages, customAge, setCustomAge, 'Enter custom')}
+                  {renderSelect('Height', height, setHeight, heights, customHeight, setCustomHeight, 'Enter custom')}
+                  {renderSelect('Eye Color', eyeColor, setEyeColor, eyeColors, customEyeColor, setCustomEyeColor, 'Enter custom')}
+                  {renderSelect('Hair Color', hairColor, setHairColor, hairColors, customHairColor, setCustomHairColor, 'Enter custom')}
+                  {renderSelect('Body Type', bodyType, setBodyType, bodyTypes, customBodyType, setCustomBodyType, 'Enter custom')}
+                  {renderSelect('Background', background, setBackground, backgrounds, customBackground, setCustomBackground, 'Enter custom')}
+                  <div className="full-width">
+                    {renderSelect('Fit/Clothing', fitType, setFitType, fitTypes, customFitType, setCustomFitType, 'Describe outfit')}
+                  </div>
+
+                  {mode === 'nsfw' && (
+                    <div className="full-width" style={{ borderTop: '1px solid #333', paddingTop: '12px', marginTop: '4px' }}>
+                      <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', color: '#ff3366', marginBottom: '12px', fontWeight: 'bold' }}>🔞 NSFW Attributes & Visibility</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div style={{ background: '#1a1a1a', padding: '10px', borderRadius: '8px', border: '1px solid #333' }}>
+                          <div style={{ fontSize: '0.8rem', color: '#ff3366', marginBottom: '6px', fontWeight: 'bold' }}>Breasts</div>
+                          <div style={{ marginBottom: '8px' }}>
+                            <label style={{ fontSize: '0.7rem', color: '#888' }}>Size</label>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button onClick={() => setBreastSizeMode('simple')} style={{ flex: 1, padding: '4px', fontSize: '0.7rem', border: breastSizeMode === 'simple' ? '1px solid #ff3366' : '1px solid #333', background: breastSizeMode === 'simple' ? 'rgba(255,51,102,0.2)' : '#222', color: breastSizeMode === 'simple' ? '#ff3366' : '#888', borderRadius: '4px', cursor: 'pointer' }}>Simple</button>
+                              <button onClick={() => setBreastSizeMode('advanced')} style={{ flex: 1, padding: '4px', fontSize: '0.7rem', border: breastSizeMode === 'advanced' ? '1px solid #ff3366' : '1px solid #333', background: breastSizeMode === 'advanced' ? 'rgba(255,51,102,0.2)' : '#222', color: breastSizeMode === 'advanced' ? '#ff3366' : '#888', borderRadius: '4px', cursor: 'pointer' }}>Adv</button>
+                            </div>
+                          </div>
+                          {breastSizeMode === 'simple' ? (
+                            <select value={breastSizeSimple} onChange={(e) => setBreastSizeSimple(e.target.value)} style={{ width: '100%', marginBottom: '8px', padding: '4px', borderRadius: '4px', border: '1px solid #333', background: '#222', color: '#fff', fontSize: '0.8rem' }}>
+                              {breastSizesSimple.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                          ) : (
+                            <input type="text" placeholder="e.g. 32DD" value={breastSizeAdvanced} onChange={(e) => setBreastSizeAdvanced(e.target.value)} style={{ width: '100%', marginBottom: '8px', padding: '4px', borderRadius: '4px', border: '1px solid #333', background: '#222', color: '#fff', fontSize: '0.8rem' }} />
+                          )}
+                          {renderVisibilityControl('Breasts', breastVisibility, setBreastVisibility)}
+                        </div>
+
+                        <div style={{ background: '#1a1a1a', padding: '10px', borderRadius: '8px', border: '1px solid #333' }}>
+                          <div style={{ fontSize: '0.8rem', color: '#ff3366', marginBottom: '6px', fontWeight: 'bold' }}>Booty/Glutes</div>
+                          {renderSelect('Size', bootySize, setBootySize, bootySizes, customBootySize, setCustomBootySize, 'Custom')}
+                          {renderVisibilityControl('Booty', bootyVisibility, setBootyVisibility)}
+                        </div>
+
+                        <div className="full-width" style={{ background: '#1a1a1a', padding: '10px', borderRadius: '8px', border: '1px solid #333' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', alignItems: 'start' }}>
+                            <div>
+                              <div style={{ fontSize: '0.8rem', color: '#ff3366', marginBottom: '6px', fontWeight: 'bold' }}>Pussy/Vulva</div>
+                              {renderSelect('Type', pussyType, setPussyType, pussyTypes, customPussyType, setCustomPussyType, 'Custom')}
+                            </div>
+                            <div>
+                              {renderVisibilityControl('Pussy', pussyVisibility, setPussyVisibility)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                {/* ── Mode Selector ── */}
+                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #333' }}>
+                  <div className="tabs" style={{ marginBottom: '8px' }}>
+                    <button className={mode === 'sfw' ? 'tab active' : 'tab'} onClick={() => handleModeChange('sfw')}>SFW</button>
+                    <button className={mode === 'nsfw' ? 'tab active' : 'tab'} onClick={() => handleModeChange('nsfw')}>NSFW</button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* ═══ RIGHT: OUTPUT & HISTORY ═══ */}
+        <div className="history-panel" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* Output Section */}
+          <div className="config-section" style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <h2 style={{ fontSize: '1rem', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Type size={18} /> Output
+              </h2>
+              {currentPrompt && (
+                <span className="badge badge-engine" style={getEngineBadgeStyle(engine)}>
+                  {engine === 'nbp3' ? <><Cpu size={10} /> NBP3</> : <><Zap size={10} /> Z-IMG</>}
+                </span>
               )}
             </div>
-
-            {/* ── Mode & Generate ── */}
-            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #333' }}>
-              <div className="tabs" style={{ marginBottom: '8px' }}>
-                <button className={mode === 'sfw' ? 'tab active' : 'tab'} onClick={() => handleModeChange('sfw')}>SFW</button>
-                <button className={mode === 'nsfw' ? 'tab active' : 'tab'} onClick={() => handleModeChange('nsfw')}>NSFW</button>
-              </div>
-              <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
-                <button 
-                  className={`btn ${engine === 'nbp3' ? 'btn-nbp3' : ''}`} 
-                  onClick={() => generatePrompt(false)} 
-                  disabled={isGenerateDisabled()} 
-                  style={{ width: '100%', justifyContent: 'center' }}
-                >
-                  {loading ? <><div className="spinner" /> Generating...</> : <><Sparkles size={16} /> Generate New</>}
-                </button>
-                <button 
-                  className="btn btn-secondary" 
-                  onClick={() => generatePrompt(true)} 
-                  disabled={isGenerateDisabled() || !currentPrompt} 
-                  style={{ width: '100%', justifyContent: 'center' }}
-                >
-                  <RefreshCw size={16} /> Generate Similar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ═══ CENTER: OUTPUT ═══ */}
-        <div className="config-section" style={{ display: 'flex', flexDirection: 'column', height: 'fit-content' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <h2 style={{ fontSize: '1rem', margin: 0 }}>Generated Prompt</h2>
-            {currentPrompt && (
-              <span className="badge badge-engine" style={getEngineBadgeStyle(engine)}>
-                {engine === 'nbp3' ? <><Cpu size={10} /> NBP3</> : <><Zap size={10} /> Z-IMG</>}
-              </span>
-            )}
-          </div>
-          {currentPrompt ? (
-            <>
-              <div className="output-box">{currentPrompt}</div>
-              <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                <button className="btn btn-secondary" onClick={copyPrompt} style={{ flex: 1 }}>
-                  {copied ? <><CheckCircle size={16} /> Copied!</> : <><Copy size={16} /> Copy</>}
-                </button>
-                <button className="btn btn-success" onClick={savePrompt} style={{ flex: 1 }}>
-                  <Save size={16} /> Save
-                </button>
-              </div>
-            </>
-          ) : (
-            <div className="output-box" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', minHeight: '300px' }}>
-              <span style={{ textAlign: 'center' }}>
-                {engine === 'nbp3' 
-                  ? 'Select NBP3 settings and click "Generate New"'
-                  : 'Click "Generate New" to create a prompt'
-                }
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* ═══ RIGHT: HISTORY ═══ */}
-        <div className="config-section history-panel" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
-          <h2 style={{ fontSize: '1rem', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}><Star size={18} /> History</h2>
-          <div className="tabs">
-            <button className={activeTab === 'all' ? 'tab active' : 'tab'} onClick={() => setActiveTab('all')}>All</button>
-            <button className={activeTab === 'sfw' ? 'tab active' : 'tab'} onClick={() => setActiveTab('sfw')}>SFW</button>
-            <button className={activeTab === 'nsfw' ? 'tab active' : 'tab'} onClick={() => setActiveTab('nsfw')}>NSFW</button>
-            <button className={activeTab === 'favorites' ? 'tab active' : 'tab'} onClick={() => setActiveTab('favorites')}><Star size={12} /></button>
-          </div>
-          <input type="text" placeholder="Search prompts..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '6px 10px', marginBottom: '12px', borderRadius: '6px', border: '1px solid #333', background: '#1a1a1a', color: '#fff', fontSize: '0.85rem' }} />
-          <button className="btn btn-secondary" onClick={exportPrompts} style={{ width: '100%', marginBottom: '12px', justifyContent: 'center' }}>
-            <Download size={16} /> Export All
-          </button>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {filteredHistory.length === 0 ? (
-              <p style={{ color: '#555', textAlign: 'center', fontSize: '0.85rem', padding: '20px' }}>{activeTab === 'favorites' ? 'No favorited prompts' : 'No saved prompts'}</p>
-            ) : (
-              filteredHistory.map(item => (
-                <div key={item.id} className={`history-item ${item.favorite ? 'favorite' : ''}`} onClick={() => openHistoryItem(item)}>
-                  <div className="badges">
-                    {/* Engine Badge */}
-                    <span className="badge badge-engine" style={getEngineBadgeStyle(item.metadata?.engine)}>
-                      {item.metadata?.engine === 'nbp3' ? <><Cpu size={10} /> NBP3</> : <><Zap size={10} /> Z-IMG</>}
-                    </span>
-                    <span className={`badge ${item.metadata?.mode === 'nsfw' ? 'badge-nsfw' : 'badge-sfw'}`}>
-                      {item.metadata?.mode === 'nsfw' ? <><EyeOff size={10} /> NSFW</> : <><Eye size={10} /> SFW</>}
-                    </span>
-                    <span className="badge"><User size={10} /> {item.metadata?.ethnicity}</span>
-                    <span className="badge"><Calendar size={10} /> {item.metadata?.age}</span>
-                    {item.metadata?.skinTone && <span className="badge" style={{background: '#8b5cf6'}}><Palette size={10} /> {item.metadata.skinTone}</span>}
-
-                  </div>
-                  <div className="history-text">{item.prompt}</div>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px', marginTop: '8px' }}>
-                    <button className="icon-btn" onClick={(e) => { e.stopPropagation(); toggleFavorite(item.id, e); }} title="Favorite">
-                      <Star size={14} fill={item.favorite ? "currentColor" : "none"} />
-                    </button>
-                    <button className="icon-btn" onClick={(e) => copyHistoryPrompt(e, item.prompt)} title="Copy"><Copy size={14} /></button>
-                    <button className="icon-btn" onClick={(e) => deletePrompt(item.id, e)} title="Delete"><Trash2 size={14} /></button>
-                  </div>
+            {currentPrompt ? (
+              <>
+                <div className="output-box">{currentPrompt}</div>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                  <button className="btn btn-secondary" onClick={copyPrompt} style={{ flex: 1 }}>
+                    {copied ? <><CheckCircle size={16} /> Copied!</> : <><Copy size={16} /> Copy</>}
+                  </button>
+                  <button className="btn btn-success" onClick={savePrompt} style={{ flex: 1 }}>
+                    <Save size={16} /> Save
+                  </button>
                 </div>
-              ))
+              </>
+            ) : (
+              <div className="output-box" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', minHeight: '200px' }}>
+                <span style={{ textAlign: 'center' }}>
+                  {engine === 'nbp3' 
+                    ? 'Select NBP3 settings and click "Generate New"'
+                    : 'Click "Generate New" to create a prompt'
+                  }
+                </span>
+              </div>
             )}
+          </div>
+
+          {/* History Section */}
+          <div className="config-section" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+            <h2 style={{ fontSize: '1rem', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}><Star size={18} /> History</h2>
+            <div className="tabs">
+              <button className={activeTab === 'all' ? 'tab active' : 'tab'} onClick={() => setActiveTab('all')}>All</button>
+              <button className={activeTab === 'sfw' ? 'tab active' : 'tab'} onClick={() => setActiveTab('sfw')}>SFW</button>
+              <button className={activeTab === 'nsfw' ? 'tab active' : 'tab'} onClick={() => setActiveTab('nsfw')}>NSFW</button>
+              <button className={activeTab === 'favorites' ? 'tab active' : 'tab'} onClick={() => setActiveTab('favorites')}><Star size={12} /></button>
+            </div>
+            <input type="text" placeholder="Search prompts..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '6px 10px', marginBottom: '12px', borderRadius: '6px', border: '1px solid #333', background: '#1a1a1a', color: '#fff', fontSize: '0.85rem' }} />
+            <button className="btn btn-secondary" onClick={exportPrompts} style={{ width: '100%', marginBottom: '12px', justifyContent: 'center' }}>
+              <Download size={16} /> Export All
+            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {filteredHistory.length === 0 ? (
+                <p style={{ color: '#555', textAlign: 'center', fontSize: '0.85rem', padding: '20px' }}>{activeTab === 'favorites' ? 'No favorited prompts' : 'No saved prompts'}</p>
+              ) : (
+                filteredHistory.map(item => (
+                  <div key={item.id} className={`history-item ${item.favorite ? 'favorite' : ''}`} onClick={() => openHistoryItem(item)}>
+                    <div className="badges">
+                      {/* Engine Badge */}
+                      <span className="badge badge-engine" style={getEngineBadgeStyle(item.metadata?.engine)}>
+                        {item.metadata?.engine === 'nbp3' ? <><Cpu size={10} /> NBP3</> : <><Zap size={10} /> Z-IMG</>}
+                      </span>
+                      <span className={`badge ${item.metadata?.mode === 'nsfw' ? 'badge-nsfw' : 'badge-sfw'}`}>
+                        {item.metadata?.mode === 'nsfw' ? <><EyeOff size={10} /> NSFW</> : <><Eye size={10} /> SFW</>}
+                      </span>
+                      <span className="badge"><User size={10} /> {item.metadata?.ethnicity}</span>
+                      <span className="badge"><Calendar size={10} /> {item.metadata?.age}</span>
+                      {item.metadata?.skinTone && <span className="badge" style={{background: '#8b5cf6'}}><Palette size={10} /> {item.metadata.skinTone}</span>}
+
+                    </div>
+                    <div className="history-text">{item.prompt}</div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px', marginTop: '8px' }}>
+                      <button className="icon-btn" onClick={(e) => { e.stopPropagation(); toggleFavorite(item.id, e); }} title="Favorite">
+                        <Star size={14} fill={item.favorite ? "currentColor" : "none"} />
+                      </button>
+                      <button className="icon-btn" onClick={(e) => copyHistoryPrompt(e, item.prompt)} title="Copy"><Copy size={14} /></button>
+                      <button className="icon-btn" onClick={(e) => deletePrompt(item.id, e)} title="Delete"><Trash2 size={14} /></button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -1041,6 +2488,47 @@ function App() {
                 <Star size={20} fill={selectedHistoryItem.favorite ? "currentColor" : "none"} />
               </button>
               <button className="btn" onClick={(e) => copyHistoryPrompt(e, selectedHistoryItem.prompt)}><Copy size={16} /> Copy to Clipboard</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ NEW PRESET MODAL ═══ */}
+      {showNewPresetModal && (
+        <div className="modal-overlay" onClick={() => setShowNewPresetModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <h3 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Plus size={20} color="#f59e0b" /> New Preset
+            </h3>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#888', marginBottom: '6px' }}>Preset Name</label>
+              <input
+                type="text"
+                value={newPresetName}
+                onChange={(e) => setNewPresetName(e.target.value)}
+                placeholder="e.g., My Custom Girl"
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #444',
+                  background: '#1a1a1a',
+                  color: '#fff',
+                  fontSize: '0.9rem'
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && createNewPreset()}
+                autoFocus
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button className="btn btn-secondary" onClick={() => setShowNewPresetModal(false)}>Cancel</button>
+              <button 
+                className="btn" 
+                onClick={createNewPreset}
+                disabled={!newPresetName.trim()}
+              >
+                Save Preset
+              </button>
             </div>
           </div>
         </div>

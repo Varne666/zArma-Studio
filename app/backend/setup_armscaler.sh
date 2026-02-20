@@ -51,8 +51,8 @@ echo ""
 echo "Installing DiffBIR dependencies (skipping PyTorch - already installed)..."
 cd "$DIFFBIR_DIR"
 # Install everything except torch/torchvision (already have 2.6.0+cu124)
-$PYTHON -m pip install omegaconf accelerate einops opencv_python scipy ftfy regex python-dateutil timm pytorch-lightning tensorboard protobuf lpips facexlib --break-system-packages 2>/dev/null || \
-$PYTHON -m pip install omegaconf accelerate einops opencv_python scipy ftfy regex python-dateutil timm pytorch-lightning tensorboard protobuf lpips facexlib
+$PYTHON -m pip install omegaconf accelerate einops opencv_python scipy ftfy regex python-dateutil timm pytorch-lightning tensorboard protobuf lpips facexlib diffusers safetensors --break-system-packages 2>/dev/null || \
+$PYTHON -m pip install omegaconf accelerate einops opencv_python scipy ftfy regex python-dateutil timm pytorch-lightning tensorboard protobuf lpips facexlib diffusers safetensors
 echo "✓ Dependencies installed"
 
 # ── Step 5: Deploy CPU wrapper ──

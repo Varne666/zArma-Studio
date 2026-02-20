@@ -2,38 +2,16 @@
 node_modules/
 __pycache__/
 *.pyc
+*.pyo
 
 # Build outputs
-dist/
 dist-electron/
-build/
-*.AppImage
-*.exe
-*.dmg
-*.deb
-*.rpm
-
-# Large model files
-*.onnx
-*.pth
-*.ckpt
-*.safetensors
-weights/
-models/*.onnx
-app/backend/models/*.onnx
-
-# Cache
-.cache/
-.vite/
-.eslintcache
+*.spec
 
 # Environment
 .env
-.env.local
-
-# OS files
-.DS_Store
-Thumbs.db
+.venv/
+venv/
 
 # IDE
 .vscode/
@@ -41,10 +19,21 @@ Thumbs.db
 *.swp
 *.swo
 
+# OS
+.DS_Store
+Thumbs.db
+
+# Large model files
+*.pth
+*.onnx
+*.ckpt
+*.safetensors
+
 # Logs
-logs/
 *.log
 
-# Temp files
-tmp/
-temp/
+# Backup files
+*.backup
+
+# Continue
+.continueignore

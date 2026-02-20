@@ -4,13 +4,19 @@
 ![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
 ![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Windows-green?style=for-the-badge)
 
-**AI-Powered Image Enhancement & Prompt Engineering Suite**
+**Local LLM-Powered Prompt Engineering Machine & AI Image Enhancement Suite**
 
-zArma Studio is a comprehensive local AI toolkit for image upscaling, restoration, watermark removal, and LLM-powered prompt generation. All processing runs locally on your machine - no cloud services, no API keys needed (except optional Gemini for image generation).
+zArma Studio is a comprehensive local AI toolkit for image analysis, prompt generation, upscaling, restoration, and watermark removal. All processing runs locally - no cloud services, no API keys needed.
 
 ![Screenshot](docs/screenshot.png)
 
 ## ✨ Features
+
+### 🖼️ Image Analysis
+- **AI Vision Analysis**: Upload any image and get detailed descriptions
+- **JSON/Prose Output**: Toggle between structured JSON or comma-separated prompts
+- **Format Switching**: Regenerate descriptions in different formats on-the-fly
+- **Custom Examples**: Add your own JSON formatting examples via `json_examples.txt`
 
 ### 🖼️ ARMscaler (DiffBIR)
 - **Super Resolution**: Upscale images 1x, 2x, 4x with AI enhancement
@@ -27,11 +33,14 @@ zArma Studio is a comprehensive local AI toolkit for image upscaling, restoratio
 ### ✍️ Prompt Generators
 - **Z-Image Turbo**: Fast prompt generation for image AI
 - **Nano Banana Pro 3**: Advanced prompt engineering with detailed controls
+- **Image-to-Prompt**: Analyze uploaded images and generate matching prompts
 - **NSFW Support**: Toggle between SFW and NSFW modes
 - **History**: Save, favorite, and export prompts
+- **JSON Output**: Structured output format for advanced workflows
 
 ### 🔧 Technical
 - **100% Local**: All AI models run on your GPU/CPU
+- **Vision Models**: Uses llava/bakllava for image analysis
 - **Modern UI**: React-based responsive interface
 - **Cross-Platform**: Linux (primary) and Windows support
 
@@ -71,11 +80,9 @@ curl -fsSL https://ollama.com/install.sh | sh
 2. **Clone and setup:**
 ```bash
 git clone https://github.com/Varne666/zArma-Studio.git
-cd zArma-Studio/app
-npm install
-cd backend
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-bash setup_armscaler.sh
+cd zArma-Studio
+chmod +x setup_dependencies.sh
+./setup_dependencies.sh
 ```
 
 3. **Start Ollama:**
@@ -83,9 +90,10 @@ bash setup_armscaler.sh
 ollama serve
 ```
 
-4. **Pull required model:**
+4. **Pull required models:**
 ```bash
-ollama pull dolphin-mistral:7b
+ollama pull nous-hermes:13b
+ollama pull bakllava:latest
 ```
 
 5. **Run the application:**
@@ -113,20 +121,27 @@ Navigate to `http://localhost:3000`
 2. **Clone repository:**
 ```powershell
 git clone https://github.com/Varne666/zArma-Studio.git
-cd zArma-Studio\app
-npm install
+cd zArma-Studio
 ```
 
-3. **Setup Python environment:**
+3. **Run setup:**
 ```powershell
+# Run the setup script
+setup_dependencies.sh
+# Or manually:
+cd app
+npm install
 cd backend
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-bash setup_armscaler.sh
-# Or on Windows without bash:
-python setup_armscaler.py
 ```
 
-4. **Start services:**
+4. **Pull required models:**
+```powershell
+ollama pull nous-hermes:13b
+ollama pull bakllava:latest
+```
+
+5. **Start services:**
 ```powershell
 # Terminal 1 - Start Ollama
 ollama serve
@@ -140,10 +155,28 @@ cd app
 npm run dev
 ```
 
-5. **Open browser:**
+6. **Open browser:**
 Navigate to `http://localhost:3000`
 
 ## 📖 Usage Guide
+
+### Image Analysis
+
+1. **Upload Image**: Drag & drop or click in Image Analysis panel
+2. **Wait for Analysis**: Vision model describes the image
+3. **Switch Formats**: 
+   - Click **Prose** for comma-separated prompt format
+   - Click **JSON** for structured JSON output
+4. **Regenerate**: Click **Regen** button to convert between formats
+5. **New Image**: Click **New Image** to analyze a different image
+
+### Custom JSON Formatting
+
+Add your own formatting examples:
+
+1. Create/edit `app/backend/json_examples.txt`
+2. Add example JSON structure
+3. The LLM will follow your format for all JSON outputs
 
 ### ARMscaler - Image Upscaling
 
@@ -171,8 +204,9 @@ Navigate to `http://localhost:3000`
 1. Select **Z-Image Turbo** or **Nano Banana Pro 3**
 2. Configure attributes (ethnicity, age, etc.)
 3. Toggle SFW/NSFW mode
-4. Click **Generate New**
-5. Copy or save prompts to history
+4. Select Output Format (Prose or JSON)
+5. Click **Generate New**
+6. Copy or save prompts to history
 
 ## 🔧 Configuration
 
@@ -183,7 +217,38 @@ Create a `.env` file in `app/backend/`:
 ```env
 PORT=3001
 OLLAMA_URL=http://localhost:11434
-DEFAULT_MODEL=dolphin-mistral:7b
+DEFAULT_MODEL=nous-hermes:13b
+```
+
+### JSON Examples
+
+Create `app/backend/json_examples.txt` to customize JSON output format:
+
+```json
+{
+  "subject": {
+    "age": "22",
+    "ethnicity": "ukrainian",
+    "hair": { "color": "blonde", "length": "long", "style": "straight" },
+    "eyes": { "color": "blue", "expression": "sultry" },
+    "skin": { "tone": "beige", "texture": "smooth" }
+  },
+  "body": {
+    "type": "fit hourglass",
+    "breasts": { "size": "large", "state": "exposed" },
+    "glutes": { "size": "large", "visibility": "show" }
+  },
+  "clothing": {
+    "items": ["black lingerie", "stockings"],
+    "fabric": "lace",
+    "fit": "tight"
+  },
+  "pose": { "type": "kneeling", "position": "on floor", "angle": "side" },
+  "expression": { "mouth": "parted", "emotion": "seductive" },
+  "background": { "setting": "bedroom", "floor": "wooden", "furniture": ["bed"] },
+  "lighting": { "type": "soft", "source": "window" },
+  "camera": { "device": "smartphone", "angle": "low", "quality": "grainy" }
+}
 ```
 
 ### GPU Memory Optimization
@@ -217,7 +282,13 @@ curl -X POST http://localhost:3001/api/cleanup
 Run setup script:
 ```bash
 cd app/backend
-bash setup_armscaler.sh
+python setup_armscaler.py
+```
+
+### Vision model not working
+Ensure you have pulled the vision model:
+```bash
+ollama pull bakllava:latest
 ```
 
 ### Slow performance
@@ -245,6 +316,7 @@ Contributions are welcome! Please:
 - **DiffBIR**: [XPixelGroup/DiffBIR](https://github.com/XPixelGroup/DiffBIR) - Blind Image Restoration
 - **LaMa**: [saic-mdal/lama](https://github.com/saic-mdal/lama) - Large Mask Inpainting
 - **Ollama**: [ollama/ollama](https://github.com/ollama/ollama) - Local LLM inference
+- **LLaVA**: [haotian-liu/LLaVA](https://github.com/haotian-liu/LLaVA) - Vision language model
 - **React + Vite**: Frontend framework
 - **Express.js**: Backend API
 
@@ -252,6 +324,8 @@ Contributions are welcome! Please:
 - Stable Diffusion v2.1 (for DiffBIR)
 - BSRNet, SwinIR (restoration models)
 - LaMa (inpainting)
+- Nous-Hermes 13B (prompt generation)
+- BakLLaVA (vision analysis)
 
 ### Author
 - **Arma** (@varne) - Creator & Developer
@@ -272,7 +346,8 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file.
 - [GitHub Repository](https://github.com/Varne666/zArma-Studio)
 - [Report Issues](https://github.com/Varne666/zArma-Studio/issues)
 - [Ollama Models](https://ollama.com/library)
+- [Discord Server](https://discord.gg/7juusXNJA9)
 
 ---
 
-Made with ❤️ by the zArma Studio Team
+Made with ❤️ by Arma (@Varne666)

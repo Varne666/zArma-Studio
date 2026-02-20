@@ -1,0 +1,28 @@
+# Core PyTorch
+torch>=2.0.0
+torchvision
+
+# Image Processing
+Pillow
+numpy
+opencv-python
+
+# ONNX Runtime for Watermark Remover
+onnxruntime
+
+# DiffBIR Dependencies
+omegaconf
+accelerate
+einops
+scipy
+ftfy
+regex
+python-dateutil
+timm
+pytorch-lightning
+tensorboard
+protobuf
+lpips
+facexlib
+diffusers
+safetensors

@@ -1,5 +1,5 @@
 #!/bin/bash
-ROOT="/home/arma/Downloads/zArma Studio"
+ROOT="$(cd "$(dirname "$0")" && pwd)"
 
 echo "🚀 Starting zArma Studio..."
 

@@ -142,8 +142,6 @@ def load_models():
         args.neg_prompt = ''
         args.n_samples = 1
         
-        args = Args()
-        
         # Load inference loop (this loads all models)
         _loop_instance = InferenceLoop(args)
         
