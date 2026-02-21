@@ -604,8 +604,7 @@ function ImageGenerationView() {
   const [topP, setTopP] = useState(0.95)
   const [outputLength, setOutputLength] = useState(8192)
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
-  const [timer, setTimer] = useState(0)
-  // Token count now computed in real-time via calculateTokens()
+  const [timerMs, setTimerMs] = useState(0)
   const [showTokenTooltip, setShowTokenTooltip] = useState(false)
   const [chats, setChats] = useState<ChatSession[]>(() => {
     const saved = localStorage.getItem('imagen_chats')
@@ -644,12 +643,12 @@ function ImageGenerationView() {
     if (isGenerating) {
       startTimeRef.current = Date.now();
       timerRef.current = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        setTimer(elapsed);
-      }, 1000);
+        const elapsed = Date.now() - startTimeRef.current;
+        setTimerMs(elapsed);
+      }, 50); // Update every 50ms for smooth display
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
-      setTimer(0);
+      setTimerMs(0);
     }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -662,8 +661,8 @@ function ImageGenerationView() {
       // Keep generation running even when hidden
       if (document.hidden && isGenerating) {
         // Recalculate timer when tab becomes visible again
-        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        setTimer(elapsed);
+        const elapsed = Date.now() - startTimeRef.current;
+        setTimerMs(elapsed);
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -686,10 +685,12 @@ function ImageGenerationView() {
 
   const tokenData = calculateTokens()
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, '0')}`
+  const formatTime = (milliseconds: number) => {
+    const totalSeconds = Math.floor(milliseconds / 1000)
+    const mins = Math.floor(totalSeconds / 60)
+    const secs = totalSeconds % 60
+    const ms = Math.floor((milliseconds % 1000) / 10) // Show 2 digits of ms
+    return `${mins}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`
   }
 
   const saveChat = () => {
@@ -736,7 +737,7 @@ function ImageGenerationView() {
   const generateImages = async () => {
     if (!apiKey || !prompt) return
     setIsGenerating(true)
-    setTimer(0)
+    setTimerMs(0)
     
     try {
       const res = await fetch('/api/generate-images', {
@@ -1113,7 +1114,12 @@ function ImageGenerationView() {
                   fontSize: '0.8rem',
                   color: '#f59e0b'
                 }}>
-                  ⚠️ <strong>High demand detected.</strong> Switched to fallback model (Gemini 2.5 Flash) and/or reduced quality to ensure generation completes.
+                  ⚠️ <strong>Timeout after 14+ minutes.</strong> {generationMeta.fallbackReason || 'Primary model (Gemini 3 Pro) took too long. Switched to Gemini 2.5 Flash for faster generation.'}
+                  {generationMeta.waitTime && (
+                    <div style={{ marginTop: '4px', fontSize: '0.7rem', color: '#d97706' }}>
+                      Waited: {generationMeta.waitTime}
+                    </div>
+                  )}
                   {generationMeta.sizes && (
                     <div style={{ marginTop: '4px', fontSize: '0.7rem', color: '#d97706' }}>
                       Used: {generationMeta.sizes.join(', ')} • Models: {generationMeta.models?.join(', ')}
@@ -1356,7 +1362,7 @@ function ImageGenerationView() {
               <div>
                 <div style={{ fontSize: '0.7rem', color: '#888' }}>Time Elapsed</div>
                 <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#10b981', fontFamily: 'monospace' }}>
-                  {formatTime(timer)}
+                  {formatTime(timerMs)}
                 </div>
               </div>
               <div 

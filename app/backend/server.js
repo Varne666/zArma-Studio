@@ -1595,10 +1595,14 @@ app.post('/api/generate-images', async (req, res) => {
       return false;
     }
     
-    function _timeoutForSize(sz){
-      if (sz === '4K') return 420000;
-      if (sz === '2K') return 240000;
-      return 120000;
+    function _timeoutForSize(sz, isFallback = false){
+      if (isFallback) {
+        if (sz === '4K') return 300000;
+        if (sz === '2K') return 180000;
+        return 120000;
+      }
+      // Primary model (Gemini 3 Pro) gets 850 seconds (14+ minutes)
+      return 850000;
     }
     
     // Generate images with retry + fallback + downshift
@@ -1615,14 +1619,14 @@ app.post('/api/generate-images', async (req, res) => {
       for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
         for (const size of sizesToTry) {
           finalSize = size;
-          const timeoutMs = _timeoutForSize(size);
+          const timeoutMs = _timeoutForSize(size, model === FALLBACK_MODEL);
           
           // Try primary model first, then fallback
           for (const model of [PRIMARY_MODEL, FALLBACK_MODEL]) {
             if (model === FALLBACK_MODEL) usedFallback = true;
             
             try {
-              console.log(`[${requestId}] Attempt ${attempt+1}/${MAX_RETRIES} | Model: ${model} | Size: ${size}`);
+              console.log(`[${requestId}] Attempt ${attempt+1}/${MAX_RETRIES} | Model: ${model} | Size: ${size} | Timeout: ${timeoutMs}ms`);
               
               const geminiKey = process.env.GEMINI_API_KEY || apiKey;
               
@@ -1657,7 +1661,8 @@ app.post('/api/generate-images', async (req, res) => {
                       dataUrl: `data:${inlineData.mime_type || inlineData.mimeType || 'image/png'};base64,${inlineData.data}`,
                       model: model,
                       size: size,
-                      fallback: usedFallback
+                      fallback: usedFallback,
+                      fallbackReason: usedFallback ? 'Primary model timeout after 850s or high demand' : null
                     });
                     console.log(`[${requestId}] Success with ${model} at ${size}${usedFallback ? ' (FALLBACK)' : ''}`);
                     break;
@@ -1707,6 +1712,7 @@ app.post('/api/generate-images', async (req, res) => {
     // Check if any used fallback
     const usedFallback = images.some(img => img.fallback);
     const finalSize = images[images.length - 1]?.size || resolution;
+    const fallbackReason = images.find(img => img.fallback)?.fallbackReason;
     
     res.json({ 
       images: images.map(img => img.dataUrl),
@@ -1716,8 +1722,10 @@ app.post('/api/generate-images', async (req, res) => {
         aspectRatio,
         resolution: finalSize,
         usedFallback,
+        fallbackReason,
         models: images.map(img => img.model),
-        sizes: images.map(img => img.size)
+        sizes: images.map(img => img.size),
+        waitTime: usedFallback ? '850+ seconds (14+ minutes) - Primary model timeout' : null
       }
     });
     
